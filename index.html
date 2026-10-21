@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ריבקין ירקות - הזמנות טריות</title>
+    <!-- קישור לקובץ ה-CSS החיצוני -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <div class="header-inner">
+            <div class="logo-area">
+                <img src="לוגו ריבקין ירקות.png" alt="ריבקין ירקות" class="logo-img">
+                <div>
+                    <h1>ריבקין ירקות</h1>
+                    <div class="subtitle">ירקות טריים באיכות גבוהה עד הבית</div>
+                </div>
+            </div>
+            <button onclick="scrollToCart()" class="cart-btn">
+                <span>🛒 סל הזמנות</span>
+                <span id="cart-badge" class="cart-badge">0</span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div>
+            <div class="section-title">הקטלוג שלנו</div>
+            
+            <!-- סרגל קטגוריות דינמי -->
+            <div id="categories-bar" class="categories-bar">
+                <button class="category-tab active" onclick="filterCategory('הכל', this)">הכל</button>
+            </div>
+
+            <div id="products-grid" class="products-grid">
+                <p style="grid-column: span 2; text-align: center; padding: 2rem; color: #64748b;">טוען מוצרים מהחנות...</p>
+            </div>
+        </div>
+
+        <div>
+            <div id="cart-section" class="sidebar">
+                <h2>
+                    <span>סיכום הזמנה</span>
+                    <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">ללא התחייבות לתשלום מראש</span>
+                </h2>
+
+                <!-- Cart Content Container -->
+                <div id="cart-content-wrapper">
+                    <div id="cart-items" class="cart-items-list">
+                        <p style="color: #94a3b8; font-size: 0.875rem; text-align: center; padding: 1.5rem 0;">הסל שלך ריק כרגע.<br>בחר ירקות מהקטלוג.</p>
+                    </div>
+
+                    <div id="checkout-form" class="checkout-form hidden">
+                        <div style="font-size: 0.875rem; font-weight: bold; color: #334155;">פרטים למשלוח / איסוף:</div>
+                        <div class="form-group">
+                            <label>שם מלא *</label>
+                            <input type="text" id="cust-name" placeholder="ישראל ישראלי">
+                        </div>
+                        <div class="form-group">
+                            <label>טלפון נייד *</label>
+                            <input type="tel" id="cust-phone" placeholder="050-0000000">
+                        </div>
+                        <div class="form-group">
+                            <label>כתובת מלאה *</label>
+                            <input type="text" id="cust-address" placeholder="רחוב, מספר בית, יישוב">
+                        </div>
+                        <div class="form-group">
+                            <label>הערות לשליח (אופציונלי)</label>
+                            <textarea id="cust-notes" rows="2" placeholder="קומה, דירה, קוד כניסה וכו'"></textarea>
+                        </div>
+
+                        <button id="submit-order-btn" onclick="sendOrder()" class="submit-btn">
+                            <span>שליחת הזמנה</span>
+                            <span>✨</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Success Box (Shown after order) -->
+                <div id="success-box" class="success-box">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
+                    <h3 style="font-size: 1.25rem; font-weight: bold; color: #16a34a; margin-bottom: 0.5rem;">ההזמנה התקבלה בהצלחה!</h3>
+                    <p style="font-size: 0.875rem; color: #64748b; line-height: 1.4;">תודה רבה! פרטי ההזמנה נשלחו אלינו ונעדכן אותך בהקדם.</p>
+                    <button onclick="resetOrder()" style="margin-top: 1.5rem; background: #f1f5f9; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer; color: #475569; font-weight: 600;">התחל הזמנה חדשה</button>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>ריבקין ירקות © 2026 | כל הזכויות שמורות</p>
+    </footer>
+
+    <!-- קישור לקובץ ה-JS החיצוני -->
+    <script src="script.js"></script>
+</body>
+</html>
