@@ -25,10 +25,14 @@ async function loadProducts() {
                 mappedUnit = 'both';
             }
 
+            // ניקוי אוטומטי של המחיר (הסרת סימן שקל, רווחים או אותיות אם במקרה נשארו בגיליון)
+            let rawPrice = String(item['מחיר'] || '').replace(/[₪,]/g, '').trim();
+            let numericPrice = parseFloat(rawPrice) || 0;
+
             return {
                 id: Number(item['מזהה']),
                 name: item['שם'],
-                price: item['מחיר'],
+                price: numericPrice,
                 category: item['קטגוריה'] ? item['קטגוריה'].trim() : 'כללי',
                 unitType: mappedUnit,
                 image: item['תמונה'],
@@ -92,6 +96,10 @@ function renderProducts() {
             unitSelectorHTML = `<span style="font-size: 0.875rem; font-weight: bold; color: #64748b;">יח'</span>`;
         }
 
+        // הצגת המחיר המעוצב אוטומטית עם ₪ ועם הכיתוב הנכון לפי סוג היחידה
+        const unitLabel = isBoth ? 'לק״ג' : 'ליחידה';
+        const formattedPrice = `₪${p.price.toFixed(2)} ${unitLabel}`;
+
         const cardClass = p.inStock ? 'product-card' : 'product-card out-of-stock';
         const overlayHTML = p.inStock ? '' : `
             <div class="out-of-stock-overlay">
@@ -109,7 +117,7 @@ function renderProducts() {
                 <div class="product-info">
                     <div>
                         <div class="product-name">${p.name}</div>
-                        <div class="product-price">${p.price}</div>
+                        <div class="product-price">${formattedPrice}</div>
                     </div>
                     <div style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
                         <input type="number" step="any" id="qty-${p.id}" placeholder="כמות" 
