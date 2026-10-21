@@ -10,19 +10,19 @@ async function loadProducts() {
         const data = await response.json();
         
         products = data.map(item => {
-            let stockVal = String(item.inStock || '').trim().toLowerCase();
+            let stockVal = String(item['במלאי'] || '').trim().toLowerCase();
             let isAvailable = true;
             if (stockVal === 'לא' || stockVal === 'false' || stockVal === '0' || stockVal === 'no') {
                 isAvailable = false;
             }
 
             return {
-                id: Number(item.id),
-                name: item.name,
-                price: item.price,
-                category: item.category ? item.category.trim() : 'כללי',
-                unitType: item.unitType || 'both',
-                image: item.image,
+                id: Number(item['מזהה']),
+                name: item['שם'],
+                price: item['מחיר'],
+                category: item['קטגוריה'] ? item['קטגוריה'].trim() : 'כללי',
+                unitType: item['סוג יחידה'] || 'both',
+                image: item['תמונה'],
                 inStock: isAvailable
             };
         });
