@@ -134,7 +134,7 @@ function renderProducts() {
                     </div>
                     <div style="margin-top: 1rem;">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-                            <input type="number" step="0.1" min="0" id="qty-${p.id}" placeholder="כמות" 
+                            <input type="number" step="0.1" min="0" inputmode="decimal" id="qty-${p.id}" placeholder="כמות" 
                                 value="${qtyVal}" 
                                 oninput="updateCartItem(${p.id}, this.value)"
                                 class="product-input" style="margin-top: 0; width: 60%;" ${inputDisabled}>
@@ -187,7 +187,6 @@ function updateCartUnit(productId, newUnit) {
     if (cart[productId]) {
         cart[productId].unit = newUnit;
     } else {
-        // אם המוצר לא בסל אבל שינו את היחידה מ-יח' לק״ג (או להיפך), נרצה לרענן כדי להציג/להסתיר את הכפתורים
         cart[productId] = { qty: '', unit: newUnit };
     }
     renderProducts();

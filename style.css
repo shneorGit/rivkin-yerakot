@@ -37,7 +37,7 @@ main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; flex-grow: 1; wid
 .product-info { padding: 1rem; display: flex; flex-direction: column; justify-content: space-between; flex-grow: 1; }
 .product-name { font-weight: bold; font-size: 1rem; color: #1e293b; }
 .product-price { color: #15803d; font-weight: 600; font-size: 0.875rem; margin-top: 0.25rem; }
-.product-input { width: 100%; padding: 0.5rem 0.75rem; font-size: 0.875rem; border: 1px solid #cbd5e1; border-radius: 0.75rem; outline: none; background: #f8fafc; }
+.product-input { width: 100%; padding: 0.5rem 0.75rem; font-size: 16px !important; border: 1px solid #cbd5e1; border-radius: 0.75rem; outline: none; background: #f8fafc; }
 .product-input:focus { border-color: #16a34a; background: white; }
 
 .sidebar { background: white; border-radius: 1rem; border: 1px solid #f1f5f9; padding: 1.25rem; position: sticky; top: 5rem; height: fit-content; }
