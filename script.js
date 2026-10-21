@@ -16,16 +16,14 @@ async function loadProducts() {
                 isAvailable = false;
             }
 
-            // המרה של סוג היחידה מהעברית בגיליון למה שהקוד צריך מאחורי הקלעים
             let rawUnit = String(item['סוג יחידה'] || '').trim();
-            let mappedUnit = 'both'; // ברירת מחדל
+            let mappedUnit = 'both'; 
             if (rawUnit === 'יחידות בלבד') {
                 mappedUnit = 'unit';
             } else if (rawUnit === 'ק"ג ויחידות') {
                 mappedUnit = 'both';
             }
 
-            // ניקוי אוטומטי של המחיר (הסרת סימן שקל, רווחים או אותיות אם במקרה נשארו בגיליון)
             let rawPrice = String(item['מחיר'] || '').replace(/[₪,]/g, '').trim();
             let numericPrice = parseFloat(rawPrice) || 0;
 
@@ -80,7 +78,8 @@ function renderProducts() {
 
     grid.innerHTML = filteredProducts.map(p => {
         const isBoth = p.unitType === 'both';
-        const currentItem = cart[p.id] || { qty: '', unit: isBoth ? 'ק״ג' : 'יח\'' };
+        // ברירת המחדל ליחידה היא 'יח'' (גם למוצרים משולבים וגם ליחידות בלבד)
+        const currentItem = cart[p.id] || { qty: '', unit: isBoth ? 'יח\'' : 'יח\'' };
         const selectedUnit = currentItem.unit;
         const qtyVal = currentItem.qty;
 
@@ -90,18 +89,29 @@ function renderProducts() {
         if (isBoth) {
             unitSelectorHTML = `
                 <select onchange="updateCartUnit(${p.id}, this.value)" ${!p.inStock ? 'disabled' : ''} style="font-size: 0.75rem; padding: 0.25rem; border-radius: 0.5rem; border: 1px solid #cbd5e1; background: white; cursor: pointer;">
-                    <option value="ק״ג" ${selectedUnit === 'ק״ג' ? 'selected' : ''}>ק״ג</option>
                     <option value="יח'" ${selectedUnit === "יח'" ? 'selected' : ''}>יח'</option>
+                    <option value="ק״ג" ${selectedUnit === 'ק״ג' ? 'selected' : ''}>ק״ג</option>
                 </select>
             `;
 
             // הצגת כפתורי הקיצור אך ורק אם המשתמש בחר כרגע בק״ג
             if (selectedUnit === 'ק״ג') {
+                let buttons = '';
+                
+                // כפתור 300 גרם מופיע אך ורק אם המוצר הוא דלעת
+                if (p.name.includes('דלעת')) {
+                    buttons += `<button type="button" onclick="setQuickQty(${p.id}, 0.3, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">300 גרם</button>`;
+                }
+
+                // חצי קילו וקילו מופיעים לכל שאר הירקות שנמכרים במשקל
+                buttons += `
+                    <button type="button" onclick="setQuickQty(${p.id}, 0.5, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">חצי קילו</button>
+                    <button type="button" onclick="setQuickQty(${p.id}, 1, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">קילו</button>
+                `;
+
                 quickButtonsHTML = `
                     <div style="display: flex; gap: 0.25rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                        <button type="button" onclick="setQuickQty(${p.id}, 0.3, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">300 גרם</button>
-                        <button type="button" onclick="setQuickQty(${p.id}, 0.5, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">חצי קילו</button>
-                        <button type="button" onclick="setQuickQty(${p.id}, 1, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">קילו</button>
+                        ${buttons}
                     </div>
                 `;
             }
@@ -109,7 +119,6 @@ function renderProducts() {
             unitSelectorHTML = `<span style="font-size: 0.875rem; font-weight: bold; color: #64748b;">יח'</span>`;
         }
 
-        // הצגת המחיר המעוצב אוטומטית עם ₪ ועם הכיתוב הנכון לפי סוג היחידה
         const unitLabel = isBoth ? 'לק״ג' : 'ליחידה';
         const formattedPrice = `₪${p.price.toFixed(2)} ${unitLabel}`;
 
@@ -184,13 +193,18 @@ function updateCartItem(productId, value) {
 }
 
 function updateCartUnit(productId, newUnit) {
-    if (cart[productId]) {
+    if (cart[productId] && cart[productId].qty !== '' && Number(cart[productId].qty) > 0) {
         cart[productId].unit = newUnit;
+        renderCart();
     } else {
-        cart[productId] = { qty: '', unit: newUnit };
+        if (!cart[productId]) {
+            cart[productId] = { qty: '', unit: newUnit };
+        } else {
+            cart[productId].unit = newUnit;
+        }
+        renderProducts();
+        renderCart();
     }
-    renderProducts();
-    renderCart();
 }
 
 function renderCart() {
@@ -198,10 +212,10 @@ function renderCart() {
     const checkoutForm = document.getElementById('checkout-form');
     const cartBadge = document.getElementById('cart-badge');
 
-    const itemIds = Object.keys(cart);
-    cartBadge.textContent = itemIds.length;
+    const validItemIds = Object.keys(cart).filter(id => cart[id].qty !== '' && Number(cart[id].qty) > 0);
+    cartBadge.textContent = validItemIds.length;
 
-    if (itemIds.length === 0) {
+    if (validItemIds.length === 0) {
         cartItemsContainer.innerHTML = `<p style="color: #94a3b8; font-size: 0.875rem; text-align: center; padding: 1.5rem 0;">הסל שלך ריק כרגע.<br>בחר ירקות מהקטלוג.</p>`;
         checkoutForm.classList.add('hidden');
         return;
@@ -209,10 +223,9 @@ function renderCart() {
 
     checkoutForm.classList.remove('hidden');
 
-    cartItemsContainer.innerHTML = itemIds.map(id => {
+    cartItemsContainer.innerHTML = validItemIds.map(id => {
         const product = products.find(p => p.id == id);
         const item = cart[id];
-        if (!item.qty || Number(item.qty) <= 0) return '';
         const displayText = `${item.qty} ${item.unit}`;
         return `
             <div class="cart-item">
