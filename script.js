@@ -16,12 +16,21 @@ async function loadProducts() {
                 isAvailable = false;
             }
 
+            // המרה של סוג היחידה מהעברית בגיליון למה שהקוד צריך מאחורי הקלעים
+            let rawUnit = String(item['סוג יחידה'] || '').trim();
+            let mappedUnit = 'both'; // ברירת מחדל
+            if (rawUnit === 'יחידות בלבד') {
+                mappedUnit = 'unit';
+            } else if (rawUnit === 'ק"ג ויחידות') {
+                mappedUnit = 'both';
+            }
+
             return {
                 id: Number(item['מזהה']),
                 name: item['שם'],
                 price: item['מחיר'],
                 category: item['קטגוריה'] ? item['קטגוריה'].trim() : 'כללי',
-                unitType: item['סוג יחידה'] || 'both',
+                unitType: mappedUnit,
                 image: item['תמונה'],
                 inStock: isAvailable
             };
