@@ -85,6 +85,8 @@ function renderProducts() {
         const qtyVal = currentItem.qty;
 
         let unitSelectorHTML = '';
+        let quickButtonsHTML = '';
+
         if (isBoth) {
             unitSelectorHTML = `
                 <select onchange="updateCartUnit(${p.id}, this.value)" ${!p.inStock ? 'disabled' : ''} style="font-size: 0.75rem; padding: 0.25rem; border-radius: 0.5rem; border: 1px solid #cbd5e1; background: white; cursor: pointer;">
@@ -92,6 +94,17 @@ function renderProducts() {
                     <option value="יח'" ${selectedUnit === "יח'" ? 'selected' : ''}>יח'</option>
                 </select>
             `;
+
+            // הצגת כפתורי הקיצור אך ורק אם המשתמש בחר כרגע בק״ג
+            if (selectedUnit === 'ק״ג') {
+                quickButtonsHTML = `
+                    <div style="display: flex; gap: 0.25rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                        <button type="button" onclick="setQuickQty(${p.id}, 0.3, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">300 גרם</button>
+                        <button type="button" onclick="setQuickQty(${p.id}, 0.5, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">חצי קילו</button>
+                        <button type="button" onclick="setQuickQty(${p.id}, 1, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">קילו</button>
+                    </div>
+                `;
+            }
         } else {
             unitSelectorHTML = `<span style="font-size: 0.875rem; font-weight: bold; color: #64748b;">יח'</span>`;
         }
@@ -119,17 +132,33 @@ function renderProducts() {
                         <div class="product-name">${p.name}</div>
                         <div class="product-price">${formattedPrice}</div>
                     </div>
-                    <div style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-                        <input type="number" step="any" id="qty-${p.id}" placeholder="כמות" 
-                            value="${qtyVal}" 
-                            oninput="updateCartItem(${p.id}, this.value)"
-                            class="product-input" style="margin-top: 0; width: 60%;" ${inputDisabled}>
-                        ${unitSelectorHTML}
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                            <input type="number" step="0.1" min="0" id="qty-${p.id}" placeholder="כמות" 
+                                value="${qtyVal}" 
+                                oninput="updateCartItem(${p.id}, this.value)"
+                                class="product-input" style="margin-top: 0; width: 60%;" ${inputDisabled}>
+                            ${unitSelectorHTML}
+                        </div>
+                        ${quickButtonsHTML}
                     </div>
                 </div>
             </div>
         `;
     }).join('');
+}
+
+function setQuickQty(productId, qty, unit) {
+    const product = products.find(p => p.id == productId);
+    if (!product || !product.inStock) return;
+
+    const inputField = document.getElementById(`qty-${productId}`);
+    if (inputField) {
+        inputField.value = qty;
+    }
+
+    cart[productId] = { qty: qty, unit: unit };
+    renderCart();
 }
 
 function updateCartItem(productId, value) {
@@ -157,8 +186,12 @@ function updateCartItem(productId, value) {
 function updateCartUnit(productId, newUnit) {
     if (cart[productId]) {
         cart[productId].unit = newUnit;
-        renderCart();
+    } else {
+        // אם המוצר לא בסל אבל שינו את היחידה מ-יח' לק״ג (או להיפך), נרצה לרענן כדי להציג/להסתיר את הכפתורים
+        cart[productId] = { qty: '', unit: newUnit };
     }
+    renderProducts();
+    renderCart();
 }
 
 function renderCart() {
@@ -180,6 +213,7 @@ function renderCart() {
     cartItemsContainer.innerHTML = itemIds.map(id => {
         const product = products.find(p => p.id == id);
         const item = cart[id];
+        if (!item.qty || Number(item.qty) <= 0) return '';
         const displayText = `${item.qty} ${item.unit}`;
         return `
             <div class="cart-item">
@@ -200,6 +234,7 @@ function removeItem(id) {
     delete cart[id];
     const inputField = document.getElementById(`qty-${id}`);
     if (inputField) inputField.value = '';
+    renderProducts();
     renderCart();
 }
 
@@ -220,6 +255,7 @@ async function sendOrder() {
 
     let orderDetails = '';
     for (const [id, item] of Object.entries(cart)) {
+        if (!item.qty || Number(item.qty) <= 0) continue;
         const product = products.find(p => p.id == id);
         orderDetails += `${product.name}: ${item.qty} ${item.unit}\n`;
     }
