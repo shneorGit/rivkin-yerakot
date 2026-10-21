@@ -16,12 +16,15 @@ async function loadProducts() {
                 isAvailable = false;
             }
 
+            // המרה של סוג היחידה מהעברית בגיליון לקוד מאחורי הקלעים
             let rawUnit = String(item['סוג יחידה'] || '').trim();
-            let mappedUnit = 'both'; 
+            let mappedUnit = 'both'; // ברירת מחדל
             if (rawUnit === 'יחידות בלבד') {
                 mappedUnit = 'unit';
             } else if (rawUnit === 'ק"ג ויחידות') {
                 mappedUnit = 'both';
+            } else if (rawUnit === 'ק"ג בלבד') {
+                mappedUnit = 'kg';
             }
 
             let rawPrice = String(item['מחיר'] || '').replace(/[₪,]/g, '').trim();
@@ -78,15 +81,32 @@ function renderProducts() {
 
     grid.innerHTML = filteredProducts.map(p => {
         const isBoth = p.unitType === 'both';
-        // ברירת המחדל ליחידה היא 'יח'' (גם למוצרים משולבים וגם ליחידות בלבד)
-        const currentItem = cart[p.id] || { qty: '', unit: isBoth ? 'יח\'' : 'יח\'' };
+        const isKgOnly = p.unitType === 'kg';
+        
+        // ברירת מחדל: אם זה 'both' מתחילים ב־'יח'', אם זה 'kg' מתחילים ב־'ק״ג'
+        const currentItem = cart[p.id] || { qty: '', unit: isKgOnly ? 'ק״ג' : 'יח\'' };
         const selectedUnit = currentItem.unit;
         const qtyVal = currentItem.qty;
 
         let unitSelectorHTML = '';
         let quickButtonsHTML = '';
 
-        if (isBoth) {
+        if (isKgOnly) {
+            // ק"ג בלבד: מציג קבוע ק״ג ומציג מיד את כפתורי הקיצור בלי לחכות לבחירה
+            unitSelectorHTML = `<span style="font-size: 0.875rem; font-weight: bold; color: #64748b;">ק״ג</span>`;
+            
+            let buttons = '';
+            if (p.name.includes('דלעת')) {
+                buttons += `<button type="button" onclick="setQuickQty(${p.id}, 0.3, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">300 גרם</button>`;
+            }
+            buttons += `
+                <button type="button" onclick="setQuickQty(${p.id}, 0.5, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">חצי קילו</button>
+                <button type="button" onclick="setQuickQty(${p.id}, 1, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">קילו</button>
+            `;
+            quickButtonsHTML = `<div style="display: flex; gap: 0.25rem; margin-top: 0.5rem; flex-wrap: wrap;">${buttons}</div>`;
+
+        } else if (isBoth) {
+            // גם וגם: מתחיל ב־יח' ומאפשר לבחור, כפתורים מופיעים רק אם בחרו ק״ג
             unitSelectorHTML = `
                 <select onchange="updateCartUnit(${p.id}, this.value)" ${!p.inStock ? 'disabled' : ''} style="font-size: 0.75rem; padding: 0.25rem; border-radius: 0.5rem; border: 1px solid #cbd5e1; background: white; cursor: pointer;">
                     <option value="יח'" ${selectedUnit === "יח'" ? 'selected' : ''}>יח'</option>
@@ -94,32 +114,23 @@ function renderProducts() {
                 </select>
             `;
 
-            // הצגת כפתורי הקיצור אך ורק אם המשתמש בחר כרגע בק״ג
             if (selectedUnit === 'ק״ג') {
                 let buttons = '';
-                
-                // כפתור 300 גרם מופיע אך ורק אם המוצר הוא דלעת
                 if (p.name.includes('דלעת')) {
                     buttons += `<button type="button" onclick="setQuickQty(${p.id}, 0.3, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">300 גרם</button>`;
                 }
-
-                // חצי קילו וקילו מופיעים לכל שאר הירקות שנמכרים במשקל
                 buttons += `
                     <button type="button" onclick="setQuickQty(${p.id}, 0.5, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">חצי קילו</button>
                     <button type="button" onclick="setQuickQty(${p.id}, 1, 'ק״ג')" style="font-size: 0.7rem; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer; color: #334155;">קילו</button>
                 `;
-
-                quickButtonsHTML = `
-                    <div style="display: flex; gap: 0.25rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                        ${buttons}
-                    </div>
-                `;
+                quickButtonsHTML = `<div style="display: flex; gap: 0.25rem; margin-top: 0.5rem; flex-wrap: wrap;">${buttons}</div>`;
             }
         } else {
+            // יחידות בלבד
             unitSelectorHTML = `<span style="font-size: 0.875rem; font-weight: bold; color: #64748b;">יח'</span>`;
         }
 
-        const unitLabel = isBoth ? 'לק״ג' : 'ליחידה';
+        const unitLabel = (isBoth || isKgOnly) ? 'לק״ג' : 'ליחידה';
         const formattedPrice = `₪${p.price.toFixed(2)} ${unitLabel}`;
 
         const cardClass = p.inStock ? 'product-card' : 'product-card out-of-stock';
@@ -175,13 +186,15 @@ function updateCartItem(productId, value) {
     if (!product || !product.inStock) return;
 
     const isBoth = product.unitType === 'both';
+    const isKgOnly = product.unitType === 'kg';
+    
     let unit = 'יח\'';
-    if (isBoth) {
+    if (isKgOnly) {
+        unit = 'ק״ג';
+    } else if (isBoth) {
         const card = document.getElementById(`qty-${productId}`).closest('.product-card');
         const selectElem = card.querySelector('select');
         if (selectElem) unit = selectElem.value;
-    } else {
-        unit = 'יח\'';
     }
 
     if (value.trim() === '' || Number(value) <= 0) {
