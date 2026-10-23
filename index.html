@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ריבקין ירקות - הזמנות טריות</title>
+    <link rel="icon" type="image/png" href="לוגו ריבקין ירקות.png">
     <!-- קישור לקובץ ה-CSS החיצוני -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+    <div class="announcement-bar">
+    <span>🚚 משלוחים בכפר חב"ד &nbsp;|&nbsp; 📋 הזמנות מתקבלות עד השעה 17:00</span>
+    </div>
     <header>
         <div class="header-inner">
             <div class="logo-area">
@@ -41,10 +45,20 @@
 
         <div>
             <div id="cart-section" class="sidebar">
-                <h2>
-                    <span>סיכום הזמנה</span>
-                    <span style="font-size: 0.7rem; color: #64748b; font-weight: normal;">ללא התחייבות לתשלום מראש</span>
-                </h2>
+                <div class="sidebar-header-box">
+                    <h2>סיכום הזמנה</h2>
+                    <span class="sidebar-subtitle">ללא התחייבות לתשלום מראש</span>
+                </div>
+
+                <!-- קוביית שעות הפעילות עברה לכאן, לתוך הסיידבר -->
+                <div class="hours-card">
+                    <div class="hours-title">🕒 שעות פעילות והזמנות:</div>
+                    <div class="hours-grid">
+                        <span>שני – חמישי: פתוח מ־09:00 (הזמנות עד 17:00)</span>
+                        <span>שישי: פתוח עד 14:00 (הזמנות עד 11:00)</span>
+                        <span style="color: #ef4444;">ראשון: סגור</span>
+                    </div>
+                </div>
 
                 <!-- Cart Content Container -->
                 <div id="cart-content-wrapper">
@@ -53,28 +67,36 @@
                     </div>
 
                     <div id="checkout-form" class="checkout-form hidden">
-                        <div style="font-size: 0.875rem; font-weight: bold; color: #334155;">פרטים למשלוח / איסוף:</div>
+                        <div class="checkout-header-row">
+                            <span style="font-size: 0.875rem; font-weight: bold; color: #334155;">פרטים למשלוח:</span>
+                            <span class="no-payment-badge">ללא תשלום מראש 🛡️</span>
+                        </div>
+
                         <div class="form-group">
-                            <label>שם מלא *</label>
-                            <input type="text" id="cust-name" placeholder="ישראל ישראלי">
+                            <label>שם מלא (שם פרטי ומשפחה) *</label>
+                            <input type="text" id="cust-name" placeholder="לדוגמה: משה כהן">
                         </div>
                         <div class="form-group">
-                            <label>טלפון נייד *</label>
-                            <input type="tel" id="cust-phone" placeholder="050-0000000">
+                            <label>טלפון נייד (לקבלת עדכונים על המשלוח) *</label>
+                            <input type="tel" id="cust-phone" inputmode="tel" placeholder="050-0000000">
                         </div>
                         <div class="form-group">
-                            <label>כתובת מלאה *</label>
-                            <input type="text" id="cust-address" placeholder="רחוב, מספר בית, יישוב">
+                            <label>כתובת מלאה למשלוח *</label>
+                            <input type="text" id="cust-address" placeholder="רחוב ומספר בית, כפר חב״ד">
                         </div>
                         <div class="form-group">
                             <label>הערות לשליח (אופציונלי)</label>
-                            <textarea id="cust-notes" rows="2" placeholder="קומה, דירה, קוד כניסה וכו'"></textarea>
+                            <textarea id="cust-notes" rows="2" placeholder="למשל: קומה 2, דירה 4, להניח ליד הדלת..."></textarea>
                         </div>
 
                         <button id="submit-order-btn" onclick="sendOrder()" class="submit-btn">
                             <span>שליחת הזמנה</span>
                             <span>✨</span>
                         </button>
+                        
+                        <div style="text-align: center; font-size: 0.7rem; color: #64748b; margin-top: 0.5rem;">
+                            משלוחים טריים ישירות עד הבית 🚚
+                        </div>
                     </div>
                 </div>
 
@@ -89,6 +111,15 @@
             </div>
         </div>
     </main>
+
+    <!-- בר עגלה צף לתחתית המסך במובייל -->
+    <div id="sticky-cart-bar" class="sticky-cart-bar hidden" onclick="scrollToCart()">
+        <div class="sticky-cart-content">
+            <span class="sticky-cart-icon">🛒</span>
+            <span id="sticky-cart-text">הסל שלך (0 פריטים)</span>
+        </div>
+        <span class="sticky-cart-action">למעבר לסל &larr;</span>
+    </div>
 
     <footer>
         <p>ריבקין ירקות © 2026 | כל הזכויות שמורות</p>

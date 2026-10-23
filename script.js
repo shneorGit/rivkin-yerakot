@@ -41,6 +41,9 @@ async function loadProducts() {
             };
         });
 
+        // סינון: הסרה מוחלטת של מוצרים שאינם במלאי מהקטלוג
+        products = products.filter(p => p.inStock);
+
         renderCategories();
         renderProducts();
     } catch (error) {
@@ -87,6 +90,11 @@ function renderProducts() {
         const currentItem = cart[p.id] || { qty: '', unit: isKgOnly ? 'ק״ג' : 'יח\'' };
         const selectedUnit = currentItem.unit;
         const qtyVal = currentItem.qty;
+
+        // הגדרת האם מותר עשרוני (רק אם זה ק"ג או אם נבחר ק"ג במוצר משולב)
+        const isDecimalAllowed = isKgOnly || (isBoth && selectedUnit === 'ק״ג');
+        const inputStep = isDecimalAllowed ? "0.1" : "1";
+        const inputMode = isDecimalAllowed ? "decimal" : "numeric";
 
         let unitSelectorHTML = '';
         let quickButtonsHTML = '';
@@ -154,7 +162,7 @@ function renderProducts() {
                     </div>
                     <div style="margin-top: 1rem;">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-                            <input type="number" step="0.1" min="0" inputmode="decimal" id="qty-${p.id}" placeholder="כמות" 
+                            <input type="number" step="${inputStep}" min="${isDecimalAllowed ? '0.1' : '1'}" inputmode="${inputMode}" id="qty-${p.id}" placeholder="כמות" 
                                 value="${qtyVal}" 
                                 oninput="updateCartItem(${p.id}, this.value)"
                                 class="product-input" style="margin-top: 0; width: 60%;" ${inputDisabled}>
@@ -197,10 +205,20 @@ function updateCartItem(productId, value) {
         if (selectElem) unit = selectElem.value;
     }
 
-    if (value.trim() === '' || Number(value) <= 0) {
+    // אם זה יחידות (לא ק"ג ולא נבחר ק"ג), נדאג שאין מספר עשרוני
+    let finalVal = value;
+    const isDecimalAllowed = isKgOnly || (isBoth && unit === 'ק״ג');
+    
+    if (!isDecimalAllowed && value.includes('.')) {
+        finalVal = Math.floor(Number(value)); // מעגל למספר שלם
+        const inputField = document.getElementById(`qty-${productId}`);
+        if (inputField) inputField.value = finalVal; // מעדכן חזרה בשדה
+    }
+
+    if (String(finalVal).trim() === '' || Number(finalVal) <= 0) {
         delete cart[productId];
     } else {
-        cart[productId] = { qty: value, unit: unit };
+        cart[productId] = { qty: finalVal, unit: unit };
     }
     renderCart();
 }
@@ -224,9 +242,21 @@ function renderCart() {
     const cartItemsContainer = document.getElementById('cart-items');
     const checkoutForm = document.getElementById('checkout-form');
     const cartBadge = document.getElementById('cart-badge');
+    const stickyCartBar = document.getElementById('sticky-cart-bar');
+    const stickyCartText = document.getElementById('sticky-cart-text');
 
     const validItemIds = Object.keys(cart).filter(id => cart[id].qty !== '' && Number(cart[id].qty) > 0);
     cartBadge.textContent = validItemIds.length;
+
+    // עדכון הבר הצף במובייל
+    if (stickyCartBar && stickyCartText) {
+        if (validItemIds.length > 0) {
+            stickyCartBar.classList.add('active');
+            stickyCartText.textContent = `הסל שלך (${validItemIds.length} פריטים)`;
+        } else {
+            stickyCartBar.classList.remove('active');
+        }
+    }
 
     if (validItemIds.length === 0) {
         cartItemsContainer.innerHTML = `<p style="color: #94a3b8; font-size: 0.875rem; text-align: center; padding: 1.5rem 0;">הסל שלך ריק כרגע.<br>בחר ירקות מהקטלוג.</p>`;
@@ -268,19 +298,66 @@ function scrollToCart() {
 }
 
 async function sendOrder() {
-    const name = document.getElementById('cust-name').value.trim();
-    const phone = document.getElementById('cust-phone').value.trim();
-    const address = document.getElementById('cust-address').value.trim();
-    const notes = document.getElementById('cust-notes').value.trim();
+    const nameInput = document.getElementById('cust-name');
+    const phoneInput = document.getElementById('cust-phone');
+    const addressInput = document.getElementById('cust-address');
+    const notesInput = document.getElementById('cust-notes');
 
-    if (!name || !phone || !address) {
-        alert('נא למלא את כל שדות החובה: שם, טלפון וכתובת.');
+    const name = nameInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const address = addressInput.value.trim();
+    const notes = notesInput.value.trim();
+
+    // 1. בדיקה שיש פריטים בעגלה
+    const validItemIds = Object.keys(cart).filter(id => cart[id].qty !== '' && Number(cart[id].qty) > 0);
+    if (validItemIds.length === 0) {
+        alert("העגלה שלך ריקה. בחר מוצרים לפני שליחת ההזמנה.");
+        return;
+    }
+
+    // 2. בדיקת כמויות תקינות לכל פריט בעגלה
+    for (const id of validItemIds) {
+        const item = cart[id];
+        const qtyNum = Number(item.qty);
+        const product = products.find(p => p.id == id);
+        const productName = product ? product.name : 'מוצר';
+
+        if (isNaN(qtyNum) || qtyNum <= 0) {
+            alert(`הכמות עבור "${productName}" אינה תקינה.`);
+            return;
+        }
+        if (qtyNum > 999) {
+            alert(`הכמות עבור "${productName}" חורגת מהמקסימום המותר (999). אנא תקן את הכמות.`);
+            return;
+        }
+    }
+
+    // 3. בדיקת שם מלא (דורש לפחות 4 תווים ורווח בין שם פרטי למשפחה)
+    if (name.length < 4 || !name.includes(' ')) {
+        alert('אנא הכנס שם מלא תקין (שם פרטי ומשפחה).');
+        nameInput.focus();
+        return;
+    }
+
+    // 4. בדיקת טלפון נייד ישראלי בסיסי (05XXXXXXXX)
+    const cleanPhone = phone.replace(/[\s-]/g, '');
+    const phoneRegex = /^05\d{8}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+        alert('אנא הכנס מספר טלפון נייד ישראלי תקין (לדוגמה: 0501234567).');
+        phoneInput.focus();
+        return;
+    }
+
+    // 5. בדיקת כתובת (לפחות 5 תווים)
+    if (address.length < 5) {
+        alert('אנא הכנס כתובת למשלוח הכוללת רחוב ומספר בית.');
+        addressInput.focus();
         return;
     }
 
     let orderDetails = '';
-    for (const [id, item] of Object.entries(cart)) {
-        if (!item.qty || Number(item.qty) <= 0) continue;
+    for (const id of validItemIds) {
+        const item = cart[id];
         const product = products.find(p => p.id == id);
         orderDetails += `${product.name}: ${item.qty} ${item.unit}\n`;
     }
@@ -316,7 +393,7 @@ async function sendOrder() {
         alert('אירעה שגיאה בחיבור לשרת.');
     } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'שליחת הזמנה';
+        submitBtn.innerHTML = '<span>שליחת הזמנה</span><span>✨</span>';
     }
 }
 
