@@ -1,6 +1,6 @@
 html {
     scroll-behavior: smooth;
-    scroll-padding-top: 90px; /* מעדכן את המרווח כדי שלחיצה על כפתור "סל הזמנות" לא תסתיר את ההדר */
+    scroll-padding-top: 90px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 body { background-color: #f8fafc; color: #1e293b; min-height: 100vh; display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom); }
@@ -16,7 +16,7 @@ body { background-color: #f8fafc; color: #1e293b; min-height: 100vh; display: fl
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     position: sticky;
     top: 0;
-    z-index: 1000; /* דואג שהוא תמיד יופיע מעל הכל */
+    z-index: 1000;
 }
 
 header {
@@ -24,7 +24,7 @@ header {
     border-bottom: 1px solid #e2e8f0;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
     position: sticky;
-    top: 37px; /* גורם להדר לשבת בדיוק מתחת לבר העליון (תלוי בגובה הבר, בדרך כלל סביב 35px-40px) */
+    top: 37px;
     z-index: 900;
 }
 
@@ -78,12 +78,122 @@ main {
 
 @media(min-width: 768px) { 
     main { 
-        grid-template-columns: 1fr 340px; /* הרחבה מבוקרת של הסיידבר ל-340px לצורך סידור הטקסטים */
+        grid-template-columns: 1fr 340px;
         padding-bottom: 1.5rem; 
     } 
 }
 
 .section-title { font-size: 1.25rem; font-weight: bold; color: #0f172a; margin-bottom: 1rem; }
+
+/* =========================================
+   עיצוב אזור כותרת הקטלוג ושורת החיפוש 
+   ========================================= */
+
+.catalog-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start !important; /* כופה את ההצמדה של כל האלמנטים לימין */
+    gap: 1.5rem; /* המרחק בין הכותרת לתיבת החיפוש */
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.search-container {
+    position: relative;
+    width: 100%;
+    max-width: 320px; /* תוחם את הגודל כדי שלא יברח שמאלה */
+}
+
+/* שדה החיפוש - ריווח פנימי שווה משני הצדדים כדי לא לדרוס את האייקונים */
+.search-container input {
+    width: 100%;
+    padding: 0.65rem 2.5rem; /* 2.5rem מימין לאייקון החיפוש, 2.5rem משמאל לכפתור ה-X */
+    font-size: 16px !important;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 9999px;
+    outline: none;
+    transition: all 0.2s ease;
+    color: #1e293b;
+}
+
+.search-container input:focus {
+    border-color: #16a34a;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+/* סמל החיפוש - מעוגן לימין התא */
+.search-icon {
+    position: absolute;
+    right: 0.8rem; /* דוחף אותו לצד ימין */
+    left: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 0.95rem;
+    pointer-events: none;
+}
+
+/* כפתור איפוס (X) - מעוגן לשמאל התא */
+.clear-search-btn {
+    position: absolute;
+    left: 0.6rem; /* דוחף אותו לצד שמאל */
+    top: 50%;
+    transform: translateY(-50%);
+    background: #e2e8f0;
+    color: #64748b;
+    border: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    padding: 0;
+}
+
+.clear-search-btn:hover {
+    background: #cbd5e1;
+    color: #1e293b;
+}
+
+/* התאמות למובייל - חיפוש ברוחב מלא, צמצום עומס בהדר והגדלת אזורי לחיצה */
+@media (max-width: 767px) {
+    .catalog-header {
+        flex-direction: column;
+        align-items: stretch; /* מותח את תיבת החיפוש לרוחב מלא */
+        gap: 0.75rem;
+    }
+
+    .search-container {
+        max-width: 100%;
+    }
+
+    /* 1. הקלה על העומס: הסתרת כותרת המשנה בהדר בתצוגת מובייל */
+    .header-inner .subtitle {
+        display: none !important;
+    }
+
+    /* 2. הגדלת אזורי לחיצה (Touch Targets) לגובה 44px לנוחות מקסימלית באצבע */
+    .quantity-control {
+        height: 44px !important;
+    }
+    
+    .unit-select, .unit-badge {
+        height: 44px !important;
+    }
+
+    .qty-btn {
+        width: 36px !important; /* מרחיב מעט את כפתורי ה +/- */
+    }
+}
+
+/* ========================================= */
 
 .categories-bar { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.75rem; margin-bottom: 1rem; white-space: nowrap; -webkit-overflow-scrolling: touch; }
 .categories-bar::-webkit-scrollbar { display: none; }
@@ -91,9 +201,9 @@ main {
 .category-tab:hover { background: #cbd5e1; }
 .category-tab.active { background: #16a34a; color: white; }
 
-.products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.85rem; }
 @media(min-width: 768px) { 
-    .products-grid { grid-template-columns: repeat(4, 1fr); }
+    .products-grid { grid-template-columns: repeat(4, 1fr); gap: 1rem; }
 }
 
 .product-card { background: white; border-radius: 1rem; overflow: hidden; border: 1px solid #f1f5f9; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s; position: relative; }
@@ -109,13 +219,151 @@ main {
 .out-of-stock-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; z-index: 10; }
 .out-of-stock-x { color: #ef4444; font-size: 2.5rem; font-weight: 900; background: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); line-height: 1; }
 
-.product-info { padding: 1rem; display: flex; flex-direction: column; justify-content: space-between; flex-grow: 1; gap: 0.75rem; }
+.product-info { padding: 0.85rem 0.75rem; display: flex; flex-direction: column; justify-content: space-between; flex-grow: 1; gap: 0.75rem; }
 .product-name { font-weight: bold; font-size: 1rem; color: #1e293b; }
 .product-price { color: #15803d; font-weight: 600; font-size: 0.875rem; }
 
-/* שדות הקלדה עם 16px למניעת זום באייפון */
-.product-input { width: 100%; padding: 0.5rem 0.75rem; font-size: 16px !important; border: 1px solid #cbd5e1; border-radius: 0.75rem; outline: none; background: #f8fafc; }
-.product-input:focus { border-color: #16a34a; background: white; }
+.product-actions-wrapper {
+    margin-top: 0.25rem;
+}
+
+/* שורת הפעולה בכרטיסייה: מסדרת את בורר הכמות והיחידות באותו גובה וללא חפיפה */
+.card-action-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
+}
+
+/* קפסולת כמות מאוחדת (+ | שדה הקלדה | -) */
+.quantity-control {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.quantity-control:focus-within {
+    border-color: #16a34a;
+}
+
+.qty-btn {
+    background: #f1f5f9;
+    color: #334155;
+    border: none;
+    width: 28px;
+    height: 100%;
+    font-size: 1.05rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.qty-btn:hover:not(:disabled) {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.qty-btn:active:not(:disabled) {
+    background: #cbd5e1;
+}
+
+.product-input {
+    width: 100%;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    font-size: 16px !important; /* מונע זום אוטומטי במובייל */
+    font-weight: 600;
+    color: #0f172a;
+    border: none;
+    border-right: 1px solid #e2e8f0;
+    border-left: 1px solid #e2e8f0;
+    outline: none;
+    background: #ffffff;
+    text-align: center;
+    -moz-appearance: textfield;
+}
+
+/* הסתרת החיצים המובנים של הדפדפן בשדה מספרי כדי שהספרה 0 לא תיחתך */
+.product-input::-webkit-outer-spin-button,
+.product-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* עיצוב תואם לתפריט בחירת יחידה (יח' / ק"ג) ולתווית יחידה קבועה */
+.unit-select {
+    height: 36px;
+    padding: 0 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.unit-select:focus {
+    border-color: #16a34a;
+}
+
+.unit-badge {
+    height: 36px;
+    padding: 0 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    background-color: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* כפתורי בחירה מהירה (חצי קילו / קילו) */
+.quick-qty-row {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.quick-qty-btn {
+    font-size: 0.72rem;
+    font-weight: 500;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.375rem;
+    padding: 0.2rem 0.45rem;
+    cursor: pointer;
+    color: #334155;
+    transition: all 0.15s;
+}
+
+.quick-qty-btn:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #15803d;
+}
 
 .sidebar { 
     background: white; 
@@ -130,7 +378,6 @@ main {
     flex-direction: column;
 }
 
-/* עיצוב כותרת הסיידבר החדש */
 .sidebar-header-box {
     margin-bottom: 0.75rem;
     border-bottom: 1px solid #f1f5f9;
@@ -182,7 +429,6 @@ main {
 
 .checkout-form { margin-top: 1rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
 
-/* שורת כותרת טופס ותגית ללא תשלום מראש בשורה אחת */
 .checkout-header-row {
     display: flex; 
     justify-content: space-between; 
@@ -197,7 +443,7 @@ main {
     background: #dcfce7; 
     padding: 0.125rem 0.375rem; 
     border-radius: 4px;
-    white-space: nowrap; /* מונע שבירת שורה בתגית */
+    white-space: nowrap;
     flex-shrink: 0;
 }
 
@@ -262,3 +508,422 @@ main {
 
 footer { background: white; border-top: 1px solid #f1f5f9; margin-top: 3rem; padding: 1.5rem; text-align: center; font-size: 0.75rem; color: #64748b; }
 .hidden { display: none; }
+
+/* תיקונים ספציפיים לתצוגת מובייל בלבד (מתחת ל-768 פיקסלים) */
+@media(max-width: 767px) {
+    .header-inner {
+        padding: 0.75rem 1rem;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .logo-area {
+        min-width: 0;
+        flex: 1;
+        gap: 0.75rem;
+    }
+
+    .logo-area > div {
+        min-width: 0;
+    }
+
+    .logo-area h1 {
+        font-size: 1.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .cart-btn {
+        padding: 0.5rem 0.875rem;
+        gap: 0.4rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+}
+
+/* עיצוב כפתור חזרה למעלה */
+#back-to-top-btn {
+    position: fixed;
+    bottom: 5rem;
+    left: 1.25rem;
+    background: #ffffff;
+    color: #16a34a;
+    border: 2px solid #16a34a;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    z-index: 99;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+#back-to-top-btn.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+#back-to-top-btn:hover {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+@media(min-width: 768px) {
+    #back-to-top-btn {
+        bottom: 2rem;
+    }
+}
+
+/* --- עיצוב כפתור הכשרות בשורת המשנה --- */
+.kashrut-link {
+    color: #15803d;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: rgba(21, 128, 61, 0.4);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.2s, color 0.2s;
+}
+
+.kashrut-link:hover {
+    color: #16a34a;
+    text-decoration-color: #16a34a;
+}
+
+/* --- חלון קופץ (Modal) לתעודת כשרות --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    padding: 1.5rem;
+    backdrop-filter: blur(4px); /* טשטוש עדין של האתר מאחור */
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: #ffffff;
+    padding: 0.5rem;
+    border-radius: 1rem;
+    position: relative;
+    max-width: 100%;
+    max-height: 90vh;
+    display: flex;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    transform: scale(0.95) translateY(10px);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1) translateY(0);
+}
+
+.kashrut-img {
+    max-width: 100%;
+    max-height: calc(90vh - 1rem);
+    object-fit: contain;
+    border-radius: 0.5rem;
+}
+
+/* עיצוב כפתור הסגירה ה-X */
+.close-modal-btn {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    z-index: 10;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.close-modal-btn:hover {
+    background: #dc2626;
+    transform: scale(1.05);
+}
+
+/* =========================================
+   תיקוני רספונסיביות - מובייל (אייפון ומסכים קטנים)
+   ========================================= */
+
+/* מאפשר לכותרת המשנה והפס הירוק לגלוש לשתי שורות במובייל כדי לא למתוח את המסך */
+.subtitle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.4rem;
+    line-height: 1.3;
+    white-space: normal; 
+}
+
+.announcement-bar {
+    white-space: normal; 
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+/* 2. מניעת הסתרת הפוטר והתקנון על ידי העגלה הצפה */
+@media (max-width: 767px) {
+    footer {
+        /* מוסיף מרווח בתחתית העמוד בגובה העגלה, כך שהגלילה תרד עד הסוף */
+        padding-bottom: calc(90px + env(safe-area-inset-bottom)) !important;
+    }
+}
+
+/* 3. תיקון כפתור "חזרה למעלה" (מרים אותו מעל העגלה המרחפת) */
+#back-to-top-btn {
+    z-index: 105 !important;
+    bottom: calc(85px + env(safe-area-inset-bottom)) !important; 
+}
+
+@media (min-width: 768px) {
+    #back-to-top-btn {
+        bottom: 2rem !important; /* במחשב נשאר במיקום הרגיל */
+    }
+}
+
+/* =========================================
+   תיקון מוחלט לחיתוך הכרטיסיות במובייל
+   ========================================= */
+@media (max-width: 767px) {
+    /* מוודא שהגריד מתחלק ל-2 עמודות שוות ולא נמתח מעבר למסך בגלל התוכן */
+    .products-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.5rem !important;
+    }
+    
+    /* שומר על רווח קטן ואחיד מצד ימין ושמאל של המסך */
+    main {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* מונע מהכרטיסייה להיות רחבה יותר מהעמודה שלה */
+    .product-card {
+        min-width: 0 !important;
+    }
+    
+    /* דחיסה עדינה של הרווחים בתוך הכרטיסייה */
+    .product-info {
+        padding: 0.6rem 0.35rem !important;
+    }
+    
+    /* דחיסה של שורת הכפתורים כדי שיכנסו כולם בנוחות בשורה אחת */
+    .card-action-row {
+        gap: 0.15rem !important;
+    }
+    
+    .qty-btn {
+        width: 24px !important;
+        font-size: 1rem !important;
+    }
+    
+    .product-input {
+        padding: 0 !important;
+        font-size: 15px !important;
+    }
+    
+    /* מאפשר לרשימת היחידות (יח'/ק"ג) להתכווץ אם חסר מקום */
+    .unit-select, .unit-badge {
+        padding: 0 0.15rem !important;
+        font-size: 0.75rem !important;
+        min-width: 0 !important;
+        flex-shrink: 1 !important;
+    }
+    
+    /* שומר ששמות מוצרים ארוכים ישברו שורה ולא ימתחו את המסך */
+    .product-name {
+        font-size: 0.9rem !important;
+        word-wrap: break-word !important;
+    }
+}
+
+@media (max-width: 767px) {
+    /* 1. איפוס מוחלט של רוחב השדה שהדפדפן מנסה לכפות */
+    .product-input {
+        width: 0 !important;
+        min-width: 0 !important;
+        flex: 1 1 0px !important;
+    }
+    
+    /* 2. הגבלת המעטפת של כפתורי הכמות לגבולות הכרטיסייה */
+    .quantity-control {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    
+    /* 3. חסימה מוחלטת של הגריד הראשי מפריצת רוחב המסך (CSS Grid Blowout) */
+    main > div {
+        min-width: 0 !important;
+    }
+    
+    /* 4. מניעה מטקסטים ארוכים למתוח את הכרטיסייה */
+    .product-name, .product-price {
+        white-space: normal !important;
+        word-break: break-word !important;
+    }
+}
+
+/* =========================================
+   עיצוב מצב "בתוך העגלה" (פריט שנבחר)
+   ========================================= */
+
+/* כרטיסייה פעילה - מסגרת ירוקה ורקע עדין */
+.product-card.in-cart {
+    border: 2px solid #16a34a;
+    background-color: #f0fdf4; /* רקע ירוק-מנטה חלש מאוד */
+    box-shadow: 0 4px 10px rgba(22, 163, 74, 0.15); /* צל עדין בגוון ירוק */
+    transform: translateY(-2px); /* מרים את הכרטיסייה טיפונת למעלה באופן קבוע */
+}
+
+/* גם אזור התמונה יקבל את הרקע הירוק העדין כדי להשתלב */
+.product-card.in-cart .product-img-container {
+    background-color: #dcfce7;
+}
+
+/* מדגיש את כפתורי הכמות של מוצר פעיל */
+.product-card.in-cart .quantity-control {
+    border-color: #16a34a;
+    box-shadow: 0 0 0 1px #16a34a; /* נותן לשדה הכמות עובי ירוק נוסף */
+}
+
+/* צובע את כפתורי המינוס והפלוס כדי שיבלטו קצת יותר כשהמוצר נבחר */
+.product-card.in-cart .qty-btn {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.product-card.in-cart .qty-btn:hover {
+    background-color: #bbf7d0;
+}
+
+/* =========================================
+   עיצוב הודעת תיאום הציפיות (הצהרת מחירים)
+   ========================================= */
+.price-disclaimer {
+    background-color: #f1f5f9; /* רקע אפור-תכלכל בהיר מרגיע */
+    color: #475569; /* צבע טקסט אפור כהה-בינוני לקריאות */
+    font-size: 0.75rem; /* גודל פונט קטן כדי לא להשתלט */
+    line-height: 1.4; /* מרווח שורות נוח לקריאה */
+    padding: 0.75rem; /* ריווח פנימי */
+    border-radius: 0.5rem; /* פינות מעוגלות */
+    border-right: 3px solid #94a3b8; /* פס עדין בצד ימין למשוך קצת תשומת לב */
+    margin-bottom: 0.75rem; /* מרחק מהכפתור שמתחת */
+}
+
+.price-disclaimer strong {
+    color: #334155; /* הדגשה קלה למילה "לתשומת לבך" */
+    display: inline-block;
+    margin-bottom: 0.2rem;
+}
+
+/* =========================================
+   כפתור וואטסאפ צף
+   ========================================= */
+.whatsapp-float {
+    position: fixed;
+    bottom: 25px;
+    right: 25px; /* ממוקם בצד ימין למטה */
+    width: 55px;
+    height: 55px;
+    background-color: #25d366;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+    z-index: 90; /* מתחת לבר העגלה הצף אם הוא פתוח */
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.whatsapp-float:hover {
+    transform: scale(1.08);
+    box-shadow: 0px 6px 14px rgba(0,0,0,0.2);
+}
+
+.whatsapp-icon {
+    width: 35px;
+    height: 35px;
+}
+
+/* התאמה למובייל: הרמת הכפתור מעל בר העגלה שנדבק לתחתית */
+@media (max-width: 767px) {
+    .whatsapp-float {
+        bottom: 85px; /* מרים אותו מעל הבר הירוק של העגלה */
+        right: 15px;
+        width: 45px;
+        height: 45px;
+    }
+    
+    .whatsapp-icon {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+/* =========================================
+   בחירת שיטת משלוח (משלוח / איסוף)
+   ========================================= */
+.delivery-method-selector {
+    display: flex;
+    background: #e2e8f0; /* הכהינו טיפה את הרקע הכללי כדי שהכפתורים יבלטו */
+    border-radius: 0.75rem;
+    padding: 0.25rem;
+    margin-bottom: 1rem;
+    gap: 0.25rem;
+}
+
+.method-btn {
+    flex: 1;
+    padding: 0.65rem;
+    border: none;
+    background: transparent;
+    color: #64748b; /* צבע אפור לטקסט שלא נבחר */
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* אפקט ריחוף לכפתור שלא נבחר */
+.method-btn:not(.active):hover {
+    background: #cbd5e1;
+    color: #334155;
+}
+
+/* העיצוב החדש והבולט לכפתור הנבחר */
+.method-btn.active {
+    background: #16a34a; /* ירוק מלא */
+    color: #ffffff; /* טקסט לבן */
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3); /* צל עדין ירוק */
+}

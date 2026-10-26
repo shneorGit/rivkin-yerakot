@@ -19,7 +19,10 @@
                 <img src="לוגו ריבקין ירקות.png" alt="ריבקין ירקות" class="logo-img">
                 <div>
                     <h1>ריבקין ירקות</h1>
-                    <div class="subtitle">ירקות טריים באיכות גבוהה עד הבית</div>
+                    <div class="subtitle">
+                        ירקות טריים באיכות גבוהה עד הבית &nbsp;|&nbsp; 
+                        <span class="kashrut-link" onclick="openKashrutModal()">בכשרות מהודרת 🌿</span>
+                    </div>
                 </div>
             </div>
             <button onclick="scrollToCart()" class="cart-btn">
@@ -31,7 +34,16 @@
 
     <main>
         <div>
-            <div class="section-title">הקטלוג שלנו</div>
+            <!-- אזור כותרת וחיפוש מעודכן -->
+            <!-- אזור כותרת וחיפוש מעודכן -->
+            <div class="catalog-header">
+                <div class="section-title" style="margin-bottom: 0;">הקטלוג שלנו</div>
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="חיפוש ירקות..." oninput="handleSearch(this.value)">
+                    <button id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" style="display: none;" title="נקה חיפוש">✕</button>
+                </div>
+            </div>
             
             <!-- סרגל קטגוריות דינמי -->
             <div id="categories-bar" class="categories-bar">
@@ -67,8 +79,16 @@
                     </div>
 
                     <div id="checkout-form" class="checkout-form hidden">
+                        <!-- אזור בחירת שיטת קבלה (משלוח / איסוף) -->
+                        <div class="delivery-method-selector">
+                            <button type="button" id="btn-delivery" class="method-btn active" onclick="setDeliveryMethod('delivery')">🚚 משלוח עד הבית</button>
+                            <button type="button" id="btn-pickup" class="method-btn" onclick="setDeliveryMethod('pickup')">🛍️ איסוף עצמי</button>
+                        </div>
+
                         <div class="checkout-header-row">
-                            <span style="font-size: 0.875rem; font-weight: bold; color: #334155;">פרטים למשלוח:</span>
+                            <span id="checkout-title" style="font-size: 0.875rem; font-weight: bold; color: #334155;">פרטים למשלוח:</span>
+                            <!-- שדה נסתר ללכידת בוטים -->
+                            <input type="text" id="bot-honeypot" style="display:none" autocomplete="off">
                             <span class="no-payment-badge">ללא תשלום מראש 🛡️</span>
                         </div>
 
@@ -77,16 +97,23 @@
                             <input type="text" id="cust-name" placeholder="לדוגמה: משה כהן">
                         </div>
                         <div class="form-group">
-                            <label>טלפון נייד (לקבלת עדכונים על המשלוח) *</label>
+                            <label>טלפון נייד (לקבלת עדכונים על ההזמנה) *</label>
                             <input type="tel" id="cust-phone" inputmode="tel" placeholder="050-0000000">
                         </div>
-                        <div class="form-group">
+                        <!-- שדה הכתובת קיבל ID כדי שנוכל להסתיר אותו -->
+                        <div class="form-group" id="address-group">
                             <label>כתובת מלאה למשלוח *</label>
                             <input type="text" id="cust-address" placeholder="רחוב ומספר בית, כפר חב״ד">
                         </div>
                         <div class="form-group">
-                            <label>הערות לשליח (אופציונלי)</label>
+                            <!-- התווית קיבלה ID כדי שנוכל לשנות את הטקסט -->
+                            <label id="notes-label">הערות לשליח (אופציונלי)</label>
                             <textarea id="cust-notes" rows="2" placeholder="למשל: קומה 2, דירה 4, להניח ליד הדלת..."></textarea>
+                        </div>
+
+                        <!-- הוספנו את בלוק ההודעה כאן, מעל הכפתור -->
+                        <div class="price-disclaimer">
+                            <strong>לתשומת לבך:</strong> אנו עושים את מירב המאמצים לשמור על מחירים מעודכנים באתר. מכיוון שרוב המוצרים נשקלים בעת האריזה ומחירי השוק משתנים, תיתכן סטייה קלה בסכום הסופי שייקבע בחנות.
                         </div>
 
                         <button id="submit-order-btn" onclick="sendOrder()" class="submit-btn">
@@ -123,9 +150,28 @@
 
     <footer>
         <p>ריבקין ירקות © 2026 | כל הזכויות שמורות</p>
+        <p style="margin-top: 0.5rem;">
+            <a href="terms.html" style="color: #64748b; text-decoration: underline;">תקנון תנאי שימוש והצהרת נגישות</a>
+        </p>
     </footer>
+
+    <!-- חלון קופץ לתעודת כשרות -->
+    <div id="kashrut-modal" class="modal-overlay" onclick="closeKashrutModal(event)">
+        <div class="modal-content">
+            <button class="close-modal-btn" onclick="closeKashrutModal(event)" title="סגור">✕</button>
+            <img src="image0.jpeg" alt="תעודת כשרות למהדרין - ריבקין ירקות" class="kashrut-img">
+        </div>
+    </div>
 
     <!-- קישור לקובץ ה-JS החיצוני -->
     <script src="script.js"></script>
+
+    <!-- כפתור חזרה למעלה -->
+    <button id="back-to-top-btn" onclick="scrollToTop()" title="חזרה למעלה">⬆️</button>
+
+    <!-- כפתור וואטסאפ צף -->
+    <a href="https://wa.me/972543243599?text=היי,%20אשמח%20לעזרה%20באתר%20ריבקין%20ירקות" class="whatsapp-float" target="_blank" title="צור קשר בוואטסאפ">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" class="whatsapp-icon">
+    </a>
 </body>
 </html>
