@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ריבקין ירקות - הזמנות טריות</title>
     <link rel="icon" type="image/png" href="לוגו ריבקין ירקות.png">
-    <!-- קישור לקובץ ה-CSS החיצוני -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -33,37 +32,30 @@
     </header>
 
     <main>
-        <div>
-            <!-- אזור כותרת וחיפוש מעודכן -->
-            <!-- אזור כותרת וחיפוש מעודכן -->
-            <div class="catalog-header">
-                <div class="section-title" style="margin-bottom: 0;">הקטלוג שלנו</div>
-                <div class="search-container">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="search-input" placeholder="חיפוש ירקות..." oninput="handleSearch(this.value)">
-                    <button id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" style="display: none;" title="נקה חיפוש">✕</button>
+        <div class="top-layout">
+            <!-- אזור הקטלוג (יקבל את רוב הרוחב) -->
+            <div class="catalog-area">
+                <div class="catalog-header">
+                    <div class="section-title" style="margin-bottom: 0;">הקטלוג שלנו</div>
+                    <div class="search-container">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="search-input" placeholder="חיפוש ירקות..." oninput="handleSearch(this.value)">
+                        <button id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" style="display: none;" title="נקה חיפוש">✕</button>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- סרגל קטגוריות דינמי -->
-            <div id="categories-bar" class="categories-bar">
-                <button class="category-tab active" onclick="filterCategory('הכל', this)">הכל</button>
-            </div>
-
-            <div id="products-grid" class="products-grid">
-                <p style="grid-column: span 2; text-align: center; padding: 2rem; color: #64748b;">טוען מוצרים מהחנות...</p>
-            </div>
-        </div>
-
-        <div>
-            <div id="cart-section" class="sidebar">
-                <div class="sidebar-header-box">
-                    <h2>סיכום הזמנה</h2>
-                    <span class="sidebar-subtitle">ללא התחייבות לתשלום מראש</span>
+                
+                <div id="categories-bar" class="categories-bar">
+                    <button class="category-tab active" onclick="filterCategory('הכל', this)">הכל</button>
                 </div>
 
-                <!-- קוביית שעות הפעילות עברה לכאן, לתוך הסיידבר -->
-                <div class="hours-card">
+                <div id="products-grid" class="products-grid">
+                    <p style="grid-column: span 2; text-align: center; padding: 2rem; color: #64748b;">טוען מוצרים מהחנות...</p>
+                </div>
+            </div>
+
+            <!-- אזור המידע הצידי (שעות פעילות ורשימות) -->
+            <div class="side-info-panel">
+                <div class="sidebar-box hours-card">
                     <div class="hours-title">🕒 שעות פעילות והזמנות:</div>
                     <div class="hours-grid">
                         <span>שני – חמישי: פתוח מ־09:00 (הזמנות עד 17:00)</span>
@@ -72,80 +64,111 @@
                     </div>
                 </div>
 
-                <!-- Cart Content Container -->
-                <div id="cart-content-wrapper">
-                    <div id="cart-items" class="cart-items-list">
-                        <p style="color: #94a3b8; font-size: 0.875rem; text-align: center; padding: 1.5rem 0;">הסל שלך ריק כרגע.<br>בחר ירקות מהקטלוג.</p>
-                    </div>
-
-                    <div id="checkout-form" class="checkout-form hidden">
-                        <!-- אזור בחירת שיטת קבלה (משלוח / איסוף) -->
-                        <div class="delivery-method-selector">
-                            <button type="button" id="btn-delivery" class="method-btn active" onclick="setDeliveryMethod('delivery')">🚚 משלוח עד הבית</button>
-                            <button type="button" id="btn-pickup" class="method-btn" onclick="setDeliveryMethod('pickup')">🛍️ איסוף עצמי</button>
-                        </div>
-
-                        <div class="checkout-header-row">
-                            <span id="checkout-title" style="font-size: 0.875rem; font-weight: bold; color: #334155;">פרטים למשלוח:</span>
-                            <!-- שדה נסתר ללכידת בוטים -->
-                            <input type="text" id="bot-honeypot" style="display:none" autocomplete="off">
-                            <span class="no-payment-badge">ללא תשלום מראש 🛡️</span>
-                        </div>
-
-                        <div class="form-group">
-                            <label>שם מלא (שם פרטי ומשפחה) *</label>
-                            <input type="text" id="cust-name" placeholder="לדוגמה: משה כהן">
-                        </div>
-                        <div class="form-group">
-                            <label>טלפון נייד (לקבלת עדכונים על ההזמנה) *</label>
-                            <input type="tel" id="cust-phone" inputmode="tel" placeholder="050-0000000">
-                        </div>
-                        <!-- שדה הכתובת קיבל ID כדי שנוכל להסתיר אותו -->
-                        <div class="form-group" id="address-group">
-                            <label>כתובת מלאה למשלוח *</label>
-                            <input type="text" id="cust-address" placeholder="רחוב ומספר בית, כפר חב״ד">
-                        </div>
-                        <div class="form-group">
-                            <!-- התווית קיבלה ID כדי שנוכל לשנות את הטקסט -->
-                            <label id="notes-label">הערות לשליח (אופציונלי)</label>
-                            <textarea id="cust-notes" rows="2" placeholder="למשל: קומה 2, דירה 4, להניח ליד הדלת..."></textarea>
-                        </div>
-
-                        <!-- הוספנו את בלוק ההודעה כאן, מעל הכפתור -->
-                        <div class="price-disclaimer">
-                            <strong>לתשומת לבך:</strong> אנו עושים את מירב המאמצים לשמור על מחירים מעודכנים באתר. מכיוון שרוב המוצרים נשקלים בעת האריזה ומחירי השוק משתנים, תיתכן סטייה קלה בסכום הסופי שייקבע בחנות.
-                        </div>
-
-                        <button id="submit-order-btn" onclick="sendOrder()" class="submit-btn">
-                            <span>שליחת הזמנה</span>
-                            <span>✨</span>
-                        </button>
+                <!-- הוספת ID class-hidden כברירת מחדל -->
+                <div id="list-actions-card" class="sidebar-box list-actions-card hidden">
+                    <div style="font-weight: bold; margin-bottom: 0.75rem; color: #0f172a; display: flex; align-items: center; gap: 0.25rem;">⭐ רשימה קבועה</div>
+                    <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">שמור את הסל הנוכחי לשימוש חוזר או טען רשימה קיימת.</p>
+                    
+                    <div id="fixed-list-actions" class="fixed-list-actions">
+                        <button type="button" onclick="saveFixedList()" class="list-btn save-list-btn hidden" id="save-list-btn">⭐ שמור כרשימה</button>
                         
-                        <div style="text-align: center; font-size: 0.7rem; color: #64748b; margin-top: 0.5rem;">
-                            משלוחים טריים ישירות עד הבית 🚚
+                        <div class="load-list-wrapper hidden" id="load-list-wrapper">
+                            <button type="button" onclick="loadFixedList()" class="list-btn load-list-btn" id="load-list-btn">📥 טען רשימה קבועה</button>
+                            <button type="button" onclick="confirmDeleteFixedList()" class="delete-list-btn" title="מחק רשימה שמורה">🗑️ מחק רשימה לצמיתות</button>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Success Box (Shown after order) -->
-                <div id="success-box" class="success-box">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
-                    <h3 style="font-size: 1.25rem; font-weight: bold; color: #16a34a; margin-bottom: 0.5rem;">ההזמנה התקבלה בהצלחה!</h3>
-                    <p style="font-size: 0.875rem; color: #64748b; line-height: 1.4;">תודה רבה! פרטי ההזמנה נשלחו אלינו ונעדכן אותך בהקדם.</p>
-                    <button onclick="resetOrder()" style="margin-top: 1.5rem; background: #f1f5f9; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer; color: #475569; font-weight: 600;">התחל הזמנה חדשה</button>
+        <!-- אזור הסל למטה -->
+        <div id="cart-section" class="bottom-cart-panel hidden">
+            <div class="sidebar-header-box">
+                <h2>סיכום הזמנה</h2>
+                <span class="sidebar-subtitle">ללא התחייבות לתשלום מראש</span>
+            </div>
+
+            <div id="cart-content-wrapper">
+                <div style="display: flex; justify-content: flex-end;">
+                    <button type="button" onclick="confirmClearCart()" class="clear-cart-btn hidden" id="clear-cart-btn" title="רוקן עגלה לגמרי">🗑️ רוקן סל</button>
                 </div>
 
+                <div id="cart-items" class="cart-items-list">
+                    <p style="color: #94a3b8; font-size: 0.875rem; text-align: center; padding: 1.5rem 0;">הסל שלך ריק כרגע.<br>בחר ירקות מהקטלוג.</p>
+                </div>
+
+                <div id="checkout-form" class="checkout-form hidden">
+                    <div class="delivery-method-selector">
+                        <button type="button" id="btn-delivery" class="method-btn active" onclick="setDeliveryMethod('delivery')">
+                            <span>🚚 משלוח עד הבית</span>
+                            <span class="delivery-cost">(עלות: 5 ₪)</span>
+                        </button>
+                        <button type="button" id="btn-pickup" class="method-btn" onclick="setDeliveryMethod('pickup')">
+                            <span>🛍️ איסוף עצמי</span>
+                            <span class="delivery-cost" style="visibility: hidden;">(חינם)</span>
+                        </button>
+                    </div>
+
+                    <div class="checkout-header-row">
+                        <span id="checkout-title" style="font-size: 0.875rem; font-weight: bold; color: #334155;">פרטים למשלוח:</span>
+                        <input type="text" id="bot-honeypot" style="display:none" autocomplete="off">
+                        <span class="no-payment-badge">ללא תשלום מראש 🛡️</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>שם מלא (שם פרטי ומשפחה) *</label>
+                        <input type="text" id="cust-name" placeholder="לדוגמה: משה כהן">
+                    </div>
+                    <div class="form-group">
+                        <label>טלפון נייד (לקבלת עדכונים על ההזמנה) *</label>
+                        <input type="tel" id="cust-phone" inputmode="tel" placeholder="050-0000000">
+                    </div>
+                    <div class="form-group" id="address-group">
+                        <label>כתובת מלאה למשלוח *</label>
+                        <input type="text" id="cust-address" placeholder="רחוב ומספר בית, כפר חב״ד">
+                    </div>
+                    <div class="form-group">
+                        <label id="notes-label">הערות לשליח (אופציונלי)</label>
+                        <textarea id="cust-notes" rows="2" placeholder="למשל: קומה 2, דירה 4, להניח ליד הדלת..."></textarea>
+                    </div>
+
+                    <div class="price-disclaimer">
+                        <strong>לתשומת לבך:</strong> אנו עושים את מירב המאמצים לשמור על מחירים מעודכנים באתר. מכיוון שרוב המוצרים נשקלים בעת האריזה ומחירי השוק משתנים, תיתכן סטייה קלה בסכום הסופי שייקבע בחנות.
+                    </div>
+
+                    <div class="save-details-group">
+                        <label class="save-details-label" title="הפרטים יישמרו על המכשיר שלך בלבד">
+                            <input type="checkbox" id="save-details-checkbox" checked>
+                            שמור את הפרטים שלי להזמנה הבאה
+                        </label>
+                    </div>
+
+                    <button id="submit-order-btn" onclick="sendOrder()" class="submit-btn">
+                        <span>שליחת הזמנה</span>
+                        <span>✨</span>
+                    </button>
+                    
+                    <div style="text-align: center; font-size: 0.7rem; color: #64748b; margin-top: 0.5rem;">
+                        משלוחים טריים ישירות עד הבית 🚚
+                    </div>
+                </div>
+            </div>
+
+            <div id="success-box" class="success-box">
+                <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
+                <h3 style="font-size: 1.25rem; font-weight: bold; color: #16a34a; margin-bottom: 0.5rem;">ההזמנה התקבלה בהצלחה!</h3>
+                <p style="font-size: 0.875rem; color: #64748b; line-height: 1.4;">תודה רבה! פרטי ההזמנה נשלחו אלינו ונעדכן אותך בהקדם.</p>
+                <button onclick="resetOrder()" style="margin-top: 1.5rem; background: #f1f5f9; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer; color: #475569; font-weight: 600;">התחל הזמנה חדשה</button>
             </div>
         </div>
     </main>
 
-    <!-- בר עגלה צף לתחתית המסך במובייל -->
     <div id="sticky-cart-bar" class="sticky-cart-bar hidden" onclick="scrollToCart()">
         <div class="sticky-cart-content">
             <span class="sticky-cart-icon">🛒</span>
             <span id="sticky-cart-text">הסל שלך (0 פריטים)</span>
         </div>
-        <span class="sticky-cart-action">למעבר לסל &larr;</span>
+        <span id="sticky-cart-action" class="sticky-cart-action">למעבר לסל &larr;</span>
     </div>
 
     <footer>
@@ -155,7 +178,6 @@
         </p>
     </footer>
 
-    <!-- חלון קופץ לתעודת כשרות -->
     <div id="kashrut-modal" class="modal-overlay" onclick="closeKashrutModal(event)">
         <div class="modal-content">
             <button class="close-modal-btn" onclick="closeKashrutModal(event)" title="סגור">✕</button>
@@ -163,13 +185,10 @@
         </div>
     </div>
 
-    <!-- קישור לקובץ ה-JS החיצוני -->
     <script src="script.js"></script>
 
-    <!-- כפתור חזרה למעלה -->
     <button id="back-to-top-btn" onclick="scrollToTop()" title="חזרה למעלה">⬆️</button>
 
-    <!-- כפתור וואטסאפ צף -->
     <a href="https://wa.me/972543243599?text=היי,%20אשמח%20לעזרה%20באתר%20ריבקין%20ירקות" class="whatsapp-float" target="_blank" title="צור קשר בוואטסאפ">
         <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" class="whatsapp-icon">
     </a>

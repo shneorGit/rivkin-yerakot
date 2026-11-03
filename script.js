@@ -1,12 +1,10 @@
 (() => {
-    // 1. State Management (עם טעינה מה-LocalStorage)
     let products = [];
     let cart = JSON.parse(localStorage.getItem('rivkin_cart')) || {};
     let currentCategory = 'הכל';
     let searchQuery = ''; 
-    let deliveryMethod = 'delivery'; // <-- חדש: שומר את שיטת הקבלה (דיפולט משלוח)
+    let deliveryMethod = 'delivery';
 
-    // 2. פונקציית עזר לאבטחת מידע (XSS Prevention)
     const escapeHTML = (str) => {
         if (!str) return '';
         const div = document.createElement('div');
@@ -14,7 +12,6 @@
         return div.innerHTML;
     };
 
-    // 3. שמירת מצב העגלה
     const saveCart = () => {
         localStorage.setItem('rivkin_cart', JSON.stringify(cart));
     };
@@ -39,7 +36,7 @@
 
                 return {
                     id: Number(item['מזהה']),
-                    name: escapeHTML(item['שם']), // חיטוי טקסט
+                    name: escapeHTML(item['שם']),
                     price: numericPrice,
                     category: item['קטגוריה'] ? escapeHTML(item['קטגוריה'].trim()) : 'כללי',
                     unitType: mappedUnit,
@@ -77,12 +74,10 @@
 
     function handleSearch(query) {
         searchQuery = query.trim().toLowerCase();
-        
         const clearBtn = document.getElementById('clear-search-btn');
         if (clearBtn) {
             clearBtn.style.display = searchQuery.length > 0 ? 'flex' : 'none';
         }
-        
         renderProducts();
     }
 
@@ -142,7 +137,6 @@
             }
 
             const unitLabel = (isBoth || isKgOnly) ? 'לק״ג' : 'ליחידה';
-            
             const isInCart = currentItem.qty !== '' && Number(currentItem.qty) > 0;
             
             return `
@@ -265,7 +259,6 @@
         renderCart();
     }
 
-    // --- פונקציה חדשה: החלפת מצב משלוח / איסוף עצמי ---
     function setDeliveryMethod(method) {
         deliveryMethod = method;
         const btnDelivery = document.getElementById('btn-delivery');
@@ -295,47 +288,40 @@
     function renderCart() {
         const cartItemsContainer = document.getElementById('cart-items');
         const checkoutForm = document.getElementById('checkout-form');
-        const cartBadge = document.getElementById('cart-badge');
-        const stickyCartBar = document.getElementById('sticky-cart-bar');
-        const stickyCartText = document.getElementById('sticky-cart-text');
+        const cartSection = document.getElementById('cart-section'); // תפסנו את הבלוק המרכזי
 
         const validItemIds = Object.keys(cart).filter(id => cart[id].qty !== '' && Number(cart[id].qty) > 0);
-        cartBadge.textContent = validItemIds.length;
-
-        if (stickyCartBar && stickyCartText) {
-            if (validItemIds.length > 0) {
-                stickyCartBar.classList.add('active');
-                stickyCartText.textContent = `הסל שלך (${validItemIds.length} פריטים)`;
-            } else {
-                stickyCartBar.classList.remove('active');
-            }
-        }
 
         if (validItemIds.length === 0) {
-            cartItemsContainer.innerHTML = `<p style="color: #94a3b8; font-size: 0.875rem; text-align: center; padding: 1.5rem 0;">הסל שלך ריק כרגע.<br>בחר ירקות מהקטלוג.</p>`;
+            // כשהסל ריק - מסתירים את כל הבלוק של סיכום ההזמנה
+            if (cartSection) cartSection.classList.add('hidden');
             checkoutForm.classList.add('hidden');
-            return;
+        } else {
+            // כשיש מוצרים - מציגים את הבלוק
+            if (cartSection) cartSection.classList.remove('hidden');
+            checkoutForm.classList.remove('hidden');
+
+            cartItemsContainer.innerHTML = validItemIds.map(id => {
+                const product = products.find(p => p.id == id);
+                if(!product) return '';
+                const item = cart[id];
+
+                return `
+                    <div class="cart-item">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                            <img src="${product.image}" alt="" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                            <span style="font-weight: 500; color: #1e293b; line-height: 1.2;">${product.name}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <span style="background: #dcfce7; color: #15803d; padding: 0.125rem 0.5rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: bold;">${item.qty} ${item.unit}</span>
+                            <button onclick="removeItem(${id})" class="remove-btn" title="הסר פריט">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
-
-        checkoutForm.classList.remove('hidden');
-
-        cartItemsContainer.innerHTML = validItemIds.map(id => {
-            const product = products.find(p => p.id == id);
-            if(!product) return '';
-            const item = cart[id];
-            return `
-                <div class="cart-item">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <img src="${product.image}" alt="" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
-                        <span style="font-weight: 500; color: #1e293b;">${product.name}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="background: #dcfce7; color: #15803d; padding: 0.125rem 0.5rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: bold;">${item.qty} ${item.unit}</span>
-                        <button onclick="removeItem(${id})" class="remove-btn">✕</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        
+        checkFixedListStatus();
     }
 
     function removeItem(id) {
@@ -345,15 +331,165 @@
         renderCart();
     }
 
+    function checkFixedListStatus() {
+        const listActionsCard = document.getElementById('list-actions-card');
+        const saveBtn = document.getElementById('save-list-btn');
+        const loadWrapper = document.getElementById('load-list-wrapper');
+        const clearCartBtn = document.getElementById('clear-cart-btn');
+        const cartBadge = document.getElementById('cart-badge');
+        
+        const stickyCartBar = document.getElementById('sticky-cart-bar');
+        const stickyCartText = document.getElementById('sticky-cart-text');
+        const stickyCartAction = document.getElementById('sticky-cart-action');
+
+        const hasFixedList = !!localStorage.getItem('rivkin_fixed_list');
+        const validItemIds = Object.keys(cart).filter(id => cart[id].qty !== '' && Number(cart[id].qty) > 0);
+        const cartHasItems = validItemIds.length > 0;
+
+        if (cartBadge) cartBadge.textContent = validItemIds.length;
+
+        if (clearCartBtn) {
+            if (cartHasItems) clearCartBtn.classList.remove('hidden');
+            else clearCartBtn.classList.add('hidden');
+        }
+
+        // לוגיקת הצגת כרטיסיית הרשימה השלמה
+        if (listActionsCard) {
+            if (!hasFixedList && !cartHasItems) {
+                // אין רשימה ואין סל - להסתיר הכל
+                listActionsCard.classList.add('hidden');
+            } else {
+                // יש רשימה או יש סל - להציג את הבלוק הראשי
+                listActionsCard.classList.remove('hidden');
+            }
+        }
+
+        // ניהול הכפתורים הפנימיים
+        if (loadWrapper) {
+            if (hasFixedList) loadWrapper.classList.remove('hidden');
+            else loadWrapper.classList.add('hidden');
+        }
+
+        if (saveBtn) {
+            if (cartHasItems) {
+                saveBtn.classList.remove('hidden');
+                saveBtn.innerHTML = hasFixedList ? '🔄 עדכן רשימה קבועה' : '⭐ שמור כרשימה';
+            } else {
+                saveBtn.classList.add('hidden');
+            }
+        }
+
+        if (stickyCartBar && stickyCartText && stickyCartAction) {
+            if (cartHasItems) {
+                stickyCartBar.classList.add('active');
+                stickyCartBar.classList.remove('suggest-list');
+                stickyCartText.innerHTML = `הסל שלך (${validItemIds.length} פריטים)`;
+                stickyCartAction.innerHTML = `למעבר לסל &larr;`;
+            } else if (!cartHasItems && hasFixedList) {
+                stickyCartBar.classList.add('active');
+                stickyCartBar.classList.add('suggest-list');
+                stickyCartText.innerHTML = `⭐ קיימת רשימה קבועה`;
+                stickyCartAction.innerHTML = `לטעינה &larr;`;
+            } else {
+                stickyCartBar.classList.remove('active');
+                stickyCartBar.classList.remove('suggest-list');
+            }
+        }
+    }
+
+    function confirmClearCart() {
+        if (confirm('האם אתה בטוח שברצונך למחוק את כל המוצרים מהעגלה?')) {
+            cart = {};
+            saveCart();
+            renderProducts();
+            renderCart(); 
+        }
+    }
+
+    function confirmDeleteFixedList() {
+        if (confirm('האם אתה בטוח שברצונך למחוק את הרשימה השמורה לצמיתות?')) {
+            localStorage.removeItem('rivkin_fixed_list');
+            checkFixedListStatus();
+        }
+    }
+
+    function saveFixedList() {
+        const validItemIds = Object.keys(cart).filter(id => cart[id].qty !== '' && Number(cart[id].qty) > 0);
+        if (validItemIds.length === 0) return;
+        
+        localStorage.setItem('rivkin_fixed_list', JSON.stringify(cart));
+        alert('העגלה נשמרה בהצלחה כרשימה הקבועה שלך! ⭐');
+        checkFixedListStatus(); 
+    }
+
+    function loadFixedList() {
+        const loadBtn = document.getElementById('load-list-btn');
+        if (loadBtn) {
+            loadBtn.disabled = true;
+            loadBtn.textContent = 'טוען...';
+        }
+
+        setTimeout(() => {
+            const savedList = JSON.parse(localStorage.getItem('rivkin_fixed_list'));
+            if (!savedList) {
+                if (loadBtn) { loadBtn.disabled = false; loadBtn.innerHTML = '📥 טען רשימה קבועה'; }
+                return;
+            }
+
+            let outOfStockItems = [];
+            let addedCount = 0;
+
+            for (const id in savedList) {
+                const product = products.find(p => p.id == id);
+                if (product) {
+                    if (product.inStock) {
+                        cart[id] = savedList[id]; 
+                        addedCount++;
+                    } else {
+                        outOfStockItems.push(product.name); 
+                    }
+                }
+            }
+
+            saveCart();
+            renderProducts();
+            renderCart();
+
+            if (outOfStockItems.length > 0) {
+                alert(`הרשימה נטענה (הכמויות בעגלה עודכנו).\n\nלתשומת לבך, המוצרים הבאים חסרים כרגע במלאי ולא התווספו:\n${outOfStockItems.join(', ')}`);
+            } else if (addedCount > 0) {
+                alert('הרשימה הקבועה נטענה לעגלה בהצלחה!\n(הכמויות עודכנו בהתאם לרשימה)');
+            }
+
+            if (loadBtn) {
+                loadBtn.disabled = false;
+                loadBtn.innerHTML = '📥 טען רשימה קבועה';
+            }
+        }, 400); 
+    }
+
+    function loadSavedUserDetails() {
+        const savedDetails = JSON.parse(localStorage.getItem('rivkin_user_details'));
+        if (savedDetails) {
+            if (savedDetails.name) document.getElementById('cust-name').value = savedDetails.name;
+            if (savedDetails.phone) document.getElementById('cust-phone').value = savedDetails.phone;
+            if (savedDetails.address) document.getElementById('cust-address').value = savedDetails.address;
+        }
+    }
+
     async function sendOrder() {
         const nameInput = document.getElementById('cust-name');
         const phoneInput = document.getElementById('cust-phone');
         const addressInput = document.getElementById('cust-address');
         const notesInput = document.getElementById('cust-notes');
         
-        const name = escapeHTML(nameInput.value.trim());
-        const phone = escapeHTML(phoneInput.value.trim());
-        const address = escapeHTML(addressInput.value.trim());
+        const rawName = nameInput.value.trim();
+        const rawPhone = phoneInput.value.trim();
+        const rawAddress = addressInput.value.trim();
+
+        const name = escapeHTML(rawName);
+        const phone = escapeHTML(rawPhone);
+        const address = escapeHTML(rawAddress);
         const notes = escapeHTML(notesInput.value.trim());
 
         const validItemIds = Object.keys(cart).filter(id => cart[id].qty !== '' && Number(cart[id].qty) > 0);
@@ -370,14 +506,12 @@
         if (name.length < 4 || !name.includes(' ')) { alert('אנא הכנס שם מלא תקין.'); nameInput.focus(); return; }
         if (!/^05\d{8}$/.test(phone.replace(/[\s-]/g, ''))) { alert('טלפון ישראלי לא תקין.'); phoneInput.focus(); return; }
         
-        // --- עדכון בדיקת הכתובת: מתבצעת רק אם נבחר משלוח ---
         if (deliveryMethod === 'delivery' && address.length < 5) { 
             alert('הכנס כתובת מלאה למשלוח.'); 
             addressInput.focus(); 
             return; 
         }
 
-        // --- עדכון הכתובת הנשלחת בהתאם לשיטת הקבלה ---
         const finalAddress = deliveryMethod === 'delivery' ? address : '🛍️ איסוף עצמי';
 
         let orderDetails = '';
@@ -399,18 +533,30 @@
                 body: JSON.stringify({
                     name: name,
                     phone: phone,
-                    address: finalAddress, // שולח את הכתובת הרגילה או את המילה "איסוף עצמי"
+                    address: finalAddress,
                     notes: notes,
                     order: orderDetails
                 })
             });
 
             if (response.ok) {
+                const saveCheckbox = document.getElementById('save-details-checkbox');
+                if (saveCheckbox && saveCheckbox.checked) {
+                    localStorage.setItem('rivkin_user_details', JSON.stringify({
+                        name: rawName,
+                        phone: rawPhone,
+                        address: rawAddress
+                    }));
+                } else {
+                    localStorage.removeItem('rivkin_user_details');
+                }
+
                 document.getElementById('cart-content-wrapper').style.display = 'none';
                 document.getElementById('success-box').classList.add('active');
                 document.getElementById('cart-badge').textContent = '0';
                 cart = {}; 
                 saveCart();
+                checkFixedListStatus(); 
             } else {
                 alert('שגיאה בשליחת ההזמנה. נסה שוב.');
             }
@@ -426,21 +572,36 @@
     function resetOrder() {
         cart = {};
         saveCart();
-        ['cust-name', 'cust-phone', 'cust-address', 'cust-notes'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = '';
-        });
+
+        const notesEl = document.getElementById('cust-notes');
+        if (notesEl) notesEl.value = '';
+
+        const hasSavedDetails = !!localStorage.getItem('rivkin_user_details');
+        if (!hasSavedDetails) {
+            ['cust-name', 'cust-phone', 'cust-address'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        }
+        
         document.getElementById('success-box').classList.remove('active');
         document.getElementById('cart-content-wrapper').style.display = 'block';
         
-        // החזרת הטופס למצב הרגיל של משלוח להזמנה הבאה
         setDeliveryMethod('delivery');
         
         renderProducts();
         renderCart();
     }
 
-    function scrollToCart() { document.getElementById('cart-section').scrollIntoView({ behavior: 'smooth' }); }
+    function scrollToCart() { 
+        const validItemIds = Object.keys(cart).filter(id => cart[id].qty !== '' && Number(cart[id].qty) > 0);
+        if (validItemIds.length === 0) {
+            alert('הסל שלך כרגע ריק. בחר ירקות מהקטלוג תחילה 🍅');
+            return;
+        }
+        document.getElementById('cart-section').scrollIntoView({ behavior: 'smooth' }); 
+    }
+    
     function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
     function openKashrutModal() {
@@ -463,7 +624,6 @@
         if (event.key === 'Escape') closeKashrutModal();
     });
 
-    // חשיפת הפונקציות לעולם החיצון (הוספנו את setDeliveryMethod)
     window.filterCategory = filterCategory;
     window.handleSearch = handleSearch; 
     window.clearSearch = clearSearch;
@@ -478,7 +638,12 @@
     window.scrollToTop = scrollToTop;
     window.openKashrutModal = openKashrutModal;
     window.closeKashrutModal = closeKashrutModal;
-    window.setDeliveryMethod = setDeliveryMethod; // <-- הוסף לכאן כדי שה-HTML יוכל לקרוא לה
+    window.setDeliveryMethod = setDeliveryMethod; 
+    window.saveFixedList = saveFixedList; 
+    window.loadFixedList = loadFixedList; 
+    window.confirmClearCart = confirmClearCart; 
+    window.confirmDeleteFixedList = confirmDeleteFixedList; 
 
+    loadSavedUserDetails();
     loadProducts();
 })();
