@@ -61,6 +61,7 @@
     let searchTimer = null;
     let deliveryMethod = 'delivery';
     let lastCartCount = null;
+    let lastOrderList = null; // ההזמנה האחרונה שנשלחה, לשמירה כרשימה קבועה ממסך ההצלחה
 
     const escapeHTML = (str) => {
         if (!str) return '';
@@ -293,6 +294,7 @@
             name: escapeHTML(item['שם']),
             rawName: String(item['שם'] || '').trim(),
             isNew: String(item['חדש'] || '').trim() === 'כן',
+            isSale: String(item['מבצע'] || '').trim() === 'כן',
             hasId: String(item['מזהה'] === undefined || item['מזהה'] === null ? '' : item['מזהה']).trim() !== '',
             price: numericPrice,
             category: escapeHTML(categoryRaw || 'כללי'),
@@ -499,6 +501,15 @@
             .map(x => x.p);
     }
 
+    // תוויות על תמונת המוצר: "מבצע" (עמודה "מבצע" בגיליון) ו"חדש" (עמודה "חדש")
+    function productBadgesHTML(p) {
+        if (!p.isSale && !p.isNew) return '';
+        return '<div class="product-badges">'
+            + (p.isSale ? '<span class="product-badge sale-badge">מבצע</span>' : '')
+            + (p.isNew ? '<span class="product-badge new-badge">חדש</span>' : '')
+            + '</div>';
+    }
+
     function productCardHTML(p) {
         const isBoth = p.unitType === 'both';
         const isKgOnly = p.unitType === 'kg';
@@ -541,6 +552,7 @@
             <div id="card-${p.id}" class="product-card ${isInCart ? 'in-cart' : ''}">
                 <div class="product-img-container">
                     <img src="${escapeAttr(p.image)}" alt="${nameAttr}" class="product-img" loading="lazy">
+                    ${productBadgesHTML(p)}
                 </div>
                 <div class="product-info">
                     <div>
@@ -811,6 +823,7 @@
         const saveBtn = $('save-list-btn');
         const loadWrapper = $('load-list-wrapper');
         const clearCartBtn = $('clear-cart-btn');
+        const cartSaveBtn = $('cart-save-list-btn');
         const cartBadge = $('cart-badge');
         const topBanner = $('top-list-banner');
 
@@ -828,6 +841,12 @@
             announce(validItemIds.length === 0 ? 'הסל ריק' : 'בסל ' + validItemIds.length + ' פריטים');
         }
         lastCartCount = validItemIds.length;
+
+        // קישור קטן לשמירת רשימה בתוך סיכום ההזמנה
+        if (cartSaveBtn) {
+            cartSaveBtn.classList.toggle('hidden', !cartHasItems);
+            cartSaveBtn.textContent = hasFixedList ? '🔄 עדכן רשימה קבועה' : '⭐ שמור כרשימה';
+        }
 
         if (clearCartBtn) {
             if (cartHasItems) clearCartBtn.classList.remove('hidden');
@@ -1184,6 +1203,11 @@
             }
 
             fillSuccessBox(orderNumber, summaryItems);
+
+            // שומרים עותק של ההזמנה, כדי שאפשר יהיה לשמור אותה כרשימה קבועה ממסך ההצלחה
+            lastOrderList = {};
+            validItemIds.forEach(id => { lastOrderList[id] = { qty: cart[id].qty, unit: cart[id].unit }; });
+            showSuccessSaveButton();
             $('cart-content-wrapper').style.display = 'none';
             const successBox = $('success-box');
             successBox.classList.add('active');
@@ -1212,8 +1236,40 @@
         }
     }
 
+    function showSuccessSaveButton() {
+        const btn = $('success-save-list-btn');
+        if (!btn) return;
+        const hasItems = lastOrderList && Object.keys(lastOrderList).length > 0;
+        btn.classList.toggle('hidden', !hasItems);
+        btn.disabled = false;
+        btn.classList.remove('saved');
+        btn.textContent = safeGetItem('rivkin_fixed_list')
+            ? '🔄 עדכן את הרשימה הקבועה'
+            : '⭐ שמור כרשימה קבועה';
+    }
+
+    function saveLastOrderAsList() {
+        if (!lastOrderList || Object.keys(lastOrderList).length === 0) return;
+        const saved = safeSetItem('rivkin_fixed_list', JSON.stringify(lastOrderList));
+        if (!saved) {
+            showMessage('לא ניתן לשמור את הרשימה במכשיר הזה (ייתכן שהאחסון בדפדפן חסום).', { title: 'לא ניתן לשמור' });
+            return;
+        }
+        const btn = $('success-save-list-btn');
+        if (btn) {
+            btn.textContent = '✔ נשמרה כרשימה הקבועה שלך';
+            btn.disabled = true;
+            btn.classList.add('saved');
+        }
+        showToast('בפעם הבאה אפשר לטעון את ההזמנה הזו בלחיצה אחת ⭐', 3800);
+        checkFixedListStatus();
+    }
+
     function resetOrder() {
         cart = {};
+        lastOrderList = null;
+        const successSaveBtn = $('success-save-list-btn');
+        if (successSaveBtn) successSaveBtn.classList.add('hidden');
         saveCart();
 
         const notesEl = $('cust-notes');
@@ -1426,6 +1482,7 @@
     window.confirmDeleteFixedList = confirmDeleteFixedList;
     window.retryLoadProducts = retryLoadProducts;
     window.handleStickyBarClick = handleStickyBarClick;
+    window.saveLastOrderAsList = saveLastOrderAsList;
 
     function init() {
         // שגיאה בשדה נעלמת ברגע שהלקוח מתחיל לתקן

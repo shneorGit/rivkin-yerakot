@@ -3,10 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ריבקין ירקות - הזמנות טריות</title>
+    <title>ריבקין ירקות | משלוח ירקות ופירות טריים בכפר חב״ד</title>
     <link rel="icon" type="image/png" href="לוגו ריבקין ירקות.png">
-    <meta name="description" content="הזמנת ירקות ופירות טריים עם משלוח עד הבית בכפר חב״ד. ללא תשלום מראש.">
+    <meta name="description" content="ריבקין ירקות - ירקן בכפר חב״ד. הזמנת ירקות ופירות טריים אונליין, בכשרות מהודרת, עם משלוח עד הבית או איסוף עצמי. ללא תשלום מראש.">
     <meta name="theme-color" content="#15803d">
+
+    <!-- הכתובת הרשמית של הדף (עוזר לגוגל לא להתבלבל בין כתובות) -->
+    <link rel="canonical" href="https://rivkin-yerakot.netlify.app/">
+
+    <!-- מידע מובנה על העסק, בשביל גוגל -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "GroceryStore",
+        "name": "ריבקין ירקות",
+        "description": "ירקות ופירות טריים בכשרות מהודרת, עם משלוח עד הבית בכפר חב״ד או איסוף עצמי.",
+        "url": "https://rivkin-yerakot.netlify.app/",
+        "image": "https://rivkin-yerakot.netlify.app/og-image.jpg",
+        "telephone": "+972-54-324-3599",
+        "priceRange": "₪",
+        "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "כפר חב״ד",
+            "addressCountry": "IL"
+        },
+        "areaServed": "כפר חב״ד"
+    }
+    </script>
 
     <!-- תצוגה מקדימה כשמשתפים את הקישור (וואטסאפ, פייסבוק) -->
     <meta property="og:type" content="website">
@@ -26,7 +49,7 @@
 <body>
 
     <div class="announcement-bar">
-    <span>🚚 משלוחים בכפר חב״ד &nbsp;|&nbsp; 📋 הזמנות מתקבלות עד השעה 17:00</span>
+        <span class="ann-item">🚚 משלוחים בכפר חב״ד</span><span class="ann-sep" aria-hidden="true">|</span><span class="ann-item">📋 הזמנות <span class="ann-long">מתקבלות </span>עד <span class="ann-long">השעה </span>17:00</span>
     </div>
     <header>
         <div class="header-inner">
@@ -35,7 +58,7 @@
                 <div>
                     <h1>ריבקין ירקות</h1>
                     <div class="subtitle">
-                        <span class="tagline">ירקות טריים באיכות גבוהה עד הבית</span>
+                        <span class="tagline">ירקות טריים <span class="tag-long">באיכות גבוהה </span>עד הבית</span>
                         <span class="subtitle-sep" aria-hidden="true">|</span>
                         <span class="kashrut-link" role="button" tabindex="0" onclick="openKashrutModal()">בכשרות מהודרת 🌿</span>
                     </div>
@@ -90,7 +113,7 @@
                     </div>
                 </div>
 
-                <!-- הודעה על מחירים ומשקל: במחשב גלויה לאורך כל הקנייה, בטלפון ממש לפני סיכום ההזמנה -->
+                <!-- הודעה על מחירים ומשקל: במחשב גלויה לאורך כל הקנייה. בטלפון מוצגת במקומה גרסה קצרה בתוך טופס ההזמנה -->
                 <div class="sidebar-box price-note-card">
                     <strong>לתשומת לבך:</strong> המחירים מתעדכנים לפי מחירי השוק. הירקות נשקלים בעת האריזה, ולכן תיתכן סטייה קלה במשקל או במספר היחידות, והסכום הסופי ייקבע בחנות.
                 </div>
@@ -118,7 +141,8 @@
                 </div>
 
                 <div id="cart-content-wrapper">
-                    <div style="display: flex; justify-content: flex-end;">
+                    <div class="cart-tools-row">
+                        <button type="button" onclick="saveFixedList()" class="cart-save-list-btn hidden" id="cart-save-list-btn">⭐ שמור כרשימה</button>
                         <button type="button" onclick="confirmClearCart()" class="clear-cart-btn hidden" id="clear-cart-btn" title="רוקן עגלה לגמרי" aria-label="רוקן את הסל">🗑️ רוקן סל</button>
                     </div>
 
@@ -174,12 +198,15 @@
 
                         <div id="checkout-hours-notice" class="order-hours-notice compact hidden"></div>
 
+                        <!-- ההודעה על מחירים ומשקל ממש לפני השליחה, בכל המסכים -->
+                        <div class="checkout-price-note">המחירים מתעדכנים לפי השוק והירקות נשקלים בעת האריזה, ולכן הסכום הסופי ייקבע בחנות.</div>
+
                         <button id="submit-order-btn" onclick="sendOrder()" class="submit-btn">
                             <span>שליחת הזמנה</span>
                         </button>
                     
-                        <div style="text-align: center; font-size: 0.7rem; color: #64748b; margin-top: 0.5rem;">
-                            משלוחים טריים ישירות עד הבית 🚚
+                        <div class="checkout-hours-line">
+                            הזמנות עד 17:00 · שישי עד 11:00 · ראשון סגור
                         </div>
                     </div>
                 </div>
@@ -193,11 +220,20 @@
                         <div class="success-items-title">מה הזמנת:</div>
                         <ul id="success-order-items" class="success-order-items"></ul>
                     </div>
-                    <button type="button" onclick="resetOrder()" style="margin-top: 1.5rem; background: #f1f5f9; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer; color: #475569; font-weight: 600;">התחל הזמנה חדשה</button>
+                    <!-- אחרי הזמנה מוצלחת: הרגע הכי טבעי לשמור אותה כרשימה קבועה -->
+                    <button type="button" id="success-save-list-btn" class="success-save-list-btn hidden" onclick="saveLastOrderAsList()">⭐ שמור כרשימה קבועה</button>
+                    <button type="button" onclick="resetOrder()" style="margin-top: 1rem; background: #f1f5f9; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer; color: #475569; font-weight: 600;">התחל הזמנה חדשה</button>
                 </div>
             </div>
             </div>
         </div>
+
+            <!-- טקסט קבוע על העסק: בשביל גוגל ומבקרים חדשים. בתחתית, כדי לא להפריע בדרך לסל -->
+            <section class="about-section">
+                <h2>ירקן בכפר חב״ד עם משלוח עד הבית</h2>
+                <p>ריבקין ירקות מביאה ירקות ופירות טריים באיכות גבוהה ובכשרות מהודרת ישירות לבית שלכם בכפר חב״ד. בוחרים מהקטלוג, שולחים הזמנה, ואנחנו אורזים ושולחים, בלי תשלום מראש. אפשר גם לבחור איסוף עצמי מהחנות.</p>
+                <p>שאלה על מוצר או הזמנה? <a href="https://wa.me/972543243599" target="_blank" rel="noopener">כתבו לנו בוואטסאפ: 054-3243599</a></p>
+            </section>
     </main>
 
     <div id="sticky-cart-bar" class="sticky-cart-bar hidden" role="button" tabindex="0" onclick="handleStickyBarClick()">

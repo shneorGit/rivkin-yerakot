@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rivkin-yerakot.netlify.app/sitemap.xml
