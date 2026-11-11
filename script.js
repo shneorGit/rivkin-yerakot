@@ -689,6 +689,23 @@
         updateCartItem(productId, newQty === 0 ? '' : newQty.toString());
     }
 
+    // פלוס ומינוס מתוך הסל: אותה לוגיקה כמו בכרטיס המוצר, והפוקוס נשאר על הכפתור
+    function changeCartQty(productId, delta) {
+        changeQty(productId, delta);
+        const product = products.find(p => p.id == productId);
+        const item = cart[productId];
+        if (!product) return;
+        if (item) {
+            announce(product.rawName + ': ' + item.qty + ' ' + item.unit);
+            const btn = document.querySelector(`[data-cart-qty="${productId}:${delta}"]`);
+            if (btn) {
+                try { btn.focus({ preventScroll: true }); } catch (e) { btn.focus(); }
+            }
+        } else {
+            announce(product.rawName + ' הוסר מהסל');
+        }
+    }
+
     function updateCartItem(productId, value) {
         const product = products.find(p => p.id == productId);
         if (!product || !product.inStock) return;
@@ -792,17 +809,21 @@
                 const product = products.find(p => p.id == id);
                 if(!product) return '';
                 const item = cart[id];
+                const nameAttr = escapeAttr(product.rawName);
 
+                // שורת מוצר בסל: שם, כמות עם פלוס ומינוס, ופח
                 return `
                     <div class="cart-item">
-                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
-                            <img src="${escapeAttr(product.image)}" alt="" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
-                            <span style="font-weight: 500; color: #1e293b; line-height: 1.2;">${product.name}</span>
+                        <div class="cart-item-name">
+                            <img src="${escapeAttr(product.image)}" alt="" class="cart-item-img">
+                            <span class="cart-item-title">${product.name}</span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <span style="background: #dcfce7; color: #15803d; padding: 0.125rem 0.5rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: bold;">${escapeHTML(item.qty)} ${item.unit}</span>
-                            <button type="button" onclick="removeItem(${id})" class="remove-btn" title="הסר פריט" aria-label="הסר מהסל: ${escapeAttr(product.rawName)}">🗑️</button>
+                        <div class="cart-qty" role="group" aria-label="כמות: ${nameAttr}">
+                            <button type="button" class="cart-qty-btn" data-cart-qty="${id}:1" aria-label="הוסף כמות: ${nameAttr}" onclick="changeCartQty(${id}, 1)">+</button>
+                            <span class="cart-qty-val">${escapeHTML(item.qty)} ${item.unit}</span>
+                            <button type="button" class="cart-qty-btn" data-cart-qty="${id}:-1" aria-label="הפחת כמות: ${nameAttr}" onclick="changeCartQty(${id}, -1)">−</button>
                         </div>
+                        <button type="button" onclick="removeItem(${id})" class="remove-btn" title="הסר פריט" aria-label="הסר מהסל: ${nameAttr}">🗑️</button>
                     </div>
                 `;
             }).join('');
@@ -1483,6 +1504,7 @@
     window.retryLoadProducts = retryLoadProducts;
     window.handleStickyBarClick = handleStickyBarClick;
     window.saveLastOrderAsList = saveLastOrderAsList;
+    window.changeCartQty = changeCartQty;
 
     function init() {
         // שגיאה בשדה נעלמת ברגע שהלקוח מתחיל לתקן

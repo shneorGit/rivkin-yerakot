@@ -757,3 +757,23 @@ footer { background: white; border-top: 1px solid #f1f5f9; margin-top: 3rem; pad
 .success-save-list-btn { display: block; width: 100%; max-width: 320px; margin: 1.25rem auto 0; background: #ffffff; border: 1.5px solid #b45309; color: #b45309; font-size: 0.95rem; font-weight: 700; padding: 0.7rem 1rem; border-radius: 0.75rem; cursor: pointer; transition: background 0.2s; }
 .success-save-list-btn:hover { background: #fffbeb; }
 .success-save-list-btn.saved { background: #f0fdf4; border-color: #16a34a; color: #15803d; cursor: default; }
+/* כמויות בתוך הסל: פלוס ומינוס סביב תג הכמות */
+.cart-item { gap: 0.5rem; padding: 0.5rem 0.6rem; }
+.cart-item-name { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; }
+.cart-item-img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.cart-item-title { font-weight: 500; color: #1e293b; line-height: 1.25; overflow-wrap: anywhere; }
+.cart-qty { display: inline-flex; align-items: center; flex-shrink: 0; background: #dcfce7; border-radius: 0.5rem; overflow: hidden; }
+/* touch-action: לחיצות מהירות על פלוס לא יגרמו לטלפון לעשות זום */
+.cart-qty-btn { width: 28px; height: 28px; border: none; background: transparent; color: #15803d; font-size: 1.05rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; touch-action: manipulation; transition: background 0.15s; }
+.cart-qty-btn:hover { background: #bbf7d0; }
+.cart-qty-btn:active { background: #86efac; }
+.cart-qty-val { min-width: 3.4rem; text-align: center; color: #15803d; font-size: 0.75rem; font-weight: bold; white-space: nowrap; }
+.cart-item .remove-btn { flex-shrink: 0; touch-action: manipulation; }
+
+/* טלפון וטאבלט: כפתורים גדולים יותר ללחיצה באצבע */
+@media (max-width: 1023px) {
+    .cart-item { padding: 0.55rem 0.65rem; }
+    .cart-qty-btn { width: 36px; height: 36px; font-size: 1.25rem; }
+    .cart-qty-val { font-size: 0.8rem; min-width: 3.6rem; }
+    .cart-item .remove-btn { padding: 0.4rem; }
+}
