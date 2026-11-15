@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#15803d">
 
     <!-- הכתובת הרשמית של הדף (עוזר לגוגל לא להתבלבל בין כתובות) -->
-    <link rel="canonical" href="https://rivkin-yerakot.netlify.app/">
+    <link rel="canonical" href="https://rivkinyerakot.net/">
 
     <!-- מידע מובנה על העסק, בשביל גוגל -->
     <script type="application/ld+json">
@@ -19,16 +19,25 @@
         "@type": "GroceryStore",
         "name": "ריבקין ירקות",
         "description": "ירקות ופירות טריים בכשרות מהודרת, עם משלוח עד הבית בכפר חב״ד או איסוף עצמי.",
-        "url": "https://rivkin-yerakot.netlify.app/",
-        "image": "https://rivkin-yerakot.netlify.app/og-image.jpg",
+        "url": "https://rivkinyerakot.net/",
+        "image": "https://rivkinyerakot.net/assets/images/og-image.jpg",
         "telephone": "+972-54-324-3599",
+        "contactPoint": [
+            { "@type": "ContactPoint", "telephone": "+972-3-960-6030", "contactType": "customer service", "name": "טלפון בחנות" },
+            { "@type": "ContactPoint", "telephone": "+972-54-324-3599", "contactType": "customer service", "name": "נייד ווואטסאפ" }
+        ],
         "priceRange": "₪",
         "address": {
             "@type": "PostalAddress",
+            "streetAddress": "אדמו״ר הרש״ב 11",
             "addressLocality": "כפר חב״ד",
             "addressCountry": "IL"
         },
-        "areaServed": "כפר חב״ד"
+        "areaServed": "כפר חב״ד",
+        "openingHoursSpecification": [
+            { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday"], "opens": "08:30", "closes": "21:00" },
+            { "@type": "OpeningHoursSpecification", "dayOfWeek": "Friday", "opens": "08:30", "closes": "13:30" }
+        ]
     }
     </script>
 
@@ -38,30 +47,31 @@
     <meta property="og:site_name" content="ריבקין ירקות">
     <meta property="og:title" content="ריבקין ירקות - הזמנות טריות">
     <meta property="og:description" content="הזמנת ירקות ופירות טריים עם משלוח עד הבית בכפר חב״ד. ללא תשלום מראש.">
-    <meta property="og:url" content="https://rivkin-yerakot.netlify.app/">
-    <meta property="og:image" content="https://rivkin-yerakot.netlify.app/og-image.jpg">
+    <meta property="og:url" content="https://rivkinyerakot.net/">
+    <meta property="og:image" content="https://rivkinyerakot.net/assets/images/og-image.jpg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="ריבקין ירקות">
     <meta name="twitter:card" content="summary_large_image">
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
     <div class="announcement-bar">
-        <span class="ann-item">🚚 משלוחים בכפר חב״ד</span><span class="ann-sep" aria-hidden="true">|</span><span class="ann-item">📋 הזמנות <span class="ann-long">מתקבלות </span>עד <span class="ann-long">השעה </span>17:00</span>
+        <span class="ann-item">🚚 משלוחים בכפר חב״ד</span><span class="ann-sep" aria-hidden="true">|</span><span class="ann-item" id="ann-orders">📋 הזמנות <span class="ann-long">מתקבלות </span>עד <span class="ann-long">השעה </span>17:00</span>
     </div>
     <header>
         <div class="header-inner">
             <div class="logo-area">
-                <img src="לוגו ריבקין ירקות.png" alt="ריבקין ירקות" class="logo-img">
+                <img src="assets/images/logo.webp" alt="ריבקין ירקות" class="logo-img">
                 <div>
                     <h1>ריבקין ירקות</h1>
                     <div class="subtitle">
                         <span class="tagline">ירקות טריים <span class="tag-long">באיכות גבוהה </span>עד הבית</span>
                         <span class="subtitle-sep" aria-hidden="true">|</span>
                         <span class="kashrut-link" role="button" tabindex="0" onclick="openKashrutModal()">בכשרות מהודרת 🌿</span>
+                        <span class="header-hours-link" role="button" tabindex="0" onclick="openHoursModal()">שעות פעילות ומשלוחים 🕒</span>
                     </div>
                 </div>
             </div>
@@ -85,11 +95,11 @@
                 <!-- הודעה מחוץ לשעות ההזמנה (מתעדכנת אוטומטית) -->
                 <div id="order-hours-notice" class="order-hours-notice hidden" role="status"></div>
                 <div class="catalog-header">
-                    <div class="section-title" style="margin-bottom: 0;">הקטלוג שלנו</div>
+                    <div class="section-title catalog-title">הקטלוג שלנו</div>
                     <div class="search-container">
                         <span class="search-icon">🔍</span>
                         <input type="text" id="search-input" placeholder="חיפוש מוצרים..." aria-label="חיפוש מוצרים" autocomplete="off" enterkeyhint="search" oninput="handleSearch(this.value)">
-                        <button type="button" id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" style="display: none;" title="נקה חיפוש" aria-label="נקה חיפוש">✕</button>
+                        <button type="button" id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" title="נקה חיפוש" aria-label="נקה חיפוש">✕</button>
                         <div id="search-status" class="sr-only" aria-live="polite"></div>
                     </div>
                 </div>
@@ -105,12 +115,44 @@
 
             <!-- אזור המידע הצידי (שעות פעילות ורשימות) -->
             <div class="side-info-panel">
-                <div class="sidebar-box hours-card">
-                    <div class="hours-title">🕒 שעות פעילות והזמנות:</div>
-                    <div class="hours-grid">
-                        <span>שני – חמישי: פתוח מ־09:00 (הזמנות עד 17:00)</span>
-                        <span>שישי: פתוח עד 14:00 (הזמנות עד 11:00)</span>
-                        <span style="color: #b91c1c;">ראשון: סגור</span>
+                <!-- לוח השעות: מלא כשהסל ריק, מתקפל לשורה קצרה כשיש מוצרים בסל (כדי שהסל יעלה למעלה) -->
+                <div id="hours-card" class="sidebar-box hours-card">
+                    <div class="hours-full" id="hours-full">
+                        <div class="hours-title">🕒 שעות פעילות, הזמנות ומשלוחים</div>
+
+                        <div class="hours-day">
+                            <div class="hours-day-name">שני – חמישי</div>
+                            <dl class="hours-table">
+                                <dt>החנות</dt><dd>08:30 עד 21:00</dd>
+                                <dt>הזמנות</dt><dd>עד 17:00 למשלוח באותו יום</dd>
+                                <dt>משלוחים</dt><dd><span class="hours-line">שני–שלישי: בין 19:00 ל-21:00</span><span class="hours-line">רביעי–חמישי: בין 18:00 ל-22:00</span></dd>
+                            </dl>
+                        </div>
+
+                        <div class="hours-day">
+                            <div class="hours-day-name">שישי</div>
+                            <dl class="hours-table">
+                                <dt>החנות</dt><dd>08:30 עד 13:30</dd>
+                                <dt>הזמנות</dt><dd>עד 11:00 למשלוח באותו יום</dd>
+                                <dt>משלוחים</dt><dd>בין 13:00 ל-15:00</dd>
+                            </dl>
+                        </div>
+
+                        <div class="hours-footer">
+                            <span class="hours-closed">ראשון: סגור</span>
+                            <div class="hours-footer-actions">
+                                <button type="button" class="hours-poster-link" onclick="openHoursModal()">🖼️ לוח השעות המלא</button>
+                                <button type="button" class="hours-collapse-btn" onclick="collapseHoursCard()" aria-controls="hours-full">הסתר ▲</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hours-compact" id="hours-compact">
+                        <div class="hours-compact-text">
+                            <span>🕒 הזמנות עד 17:00 · שישי עד 11:00</span>
+                            <span>🚚 משלוחים בערב · בשישי בצהריים</span>
+                        </div>
+                        <button type="button" class="hours-expand-btn" onclick="expandHoursCard()" aria-controls="hours-full" aria-expanded="false">פירוט</button>
                     </div>
                 </div>
 
@@ -121,8 +163,8 @@
 
                 <!-- הוספת ID class-hidden כברירת מחדל -->
                 <div id="list-actions-card" class="sidebar-box list-actions-card hidden">
-                    <div style="font-weight: bold; margin-bottom: 0.75rem; color: #0f172a; display: flex; align-items: center; gap: 0.25rem;">⭐ רשימה קבועה</div>
-                    <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">שמור את הסל הנוכחי לשימוש חוזר או טען רשימה קיימת.</p>
+                    <div class="list-actions-title">⭐ רשימה קבועה</div>
+                    <p class="list-actions-text">שמור את הסל הנוכחי לשימוש חוזר או טען רשימה קיימת.</p>
                     
                     <div id="fixed-list-actions" class="fixed-list-actions">
                         <button type="button" onclick="saveFixedList()" class="list-btn save-list-btn hidden" id="save-list-btn">⭐ שמור כרשימה</button>
@@ -148,7 +190,7 @@
                     </div>
 
                     <div id="cart-items" class="cart-items-list">
-                        <p style="color: #64748b; font-size: 0.875rem; text-align: center; padding: 1.5rem 0;">הסל שלך ריק כרגע.<br>בחר ירקות מהקטלוג.</p>
+                        <p class="cart-empty">הסל שלך ריק כרגע.<br>בחר ירקות מהקטלוג.</p>
                     </div>
 
                     <div id="checkout-form" class="checkout-form hidden">
@@ -159,13 +201,13 @@
                             </button>
                             <button type="button" id="btn-pickup" class="method-btn" onclick="setDeliveryMethod('pickup')">
                                 <span>🛍️ איסוף עצמי</span>
-                                <span class="delivery-cost" style="visibility: hidden;">(חינם)</span>
+                                <span class="delivery-cost is-placeholder" aria-hidden="true">(חינם)</span>
                             </button>
                         </div>
 
                         <div class="checkout-header-row">
-                            <span id="checkout-title" style="font-size: 0.875rem; font-weight: bold; color: #334155;">פרטים למשלוח:</span>
-                            <input type="text" id="bot-honeypot" style="display:none" autocomplete="off">
+                            <span id="checkout-title" class="checkout-title">פרטים למשלוח:</span>
+                            <input type="text" id="bot-honeypot" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
                             <span class="no-payment-badge">ללא תשלום מראש 🛡️</span>
                         </div>
 
@@ -202,6 +244,9 @@
                         <!-- ההודעה על מחירים ומשקל ממש לפני השליחה, בכל המסכים -->
                         <div class="checkout-price-note">המחירים מתעדכנים לפי השוק והירקות נשקלים בעת האריזה, ולכן הסכום הסופי ייקבע בחנות.</div>
 
+                        <!-- הודעת פרטיות ברגע איסוף הפרטים -->
+                        <div class="checkout-hours-line">הפרטים משמשים לטיפול בהזמנה בלבד · <a href="terms.html#privacy" target="_blank" rel="noopener">מדיניות פרטיות</a></div>
+
                         <button id="submit-order-btn" onclick="sendOrder()" class="submit-btn">
                             <span>שליחת הזמנה</span>
                         </button>
@@ -209,21 +254,24 @@
                         <div class="checkout-hours-line">
                             הזמנות עד 17:00 · שישי עד 11:00 · ראשון סגור
                         </div>
+                        <button type="button" class="checkout-hours-link" onclick="openHoursModal()">🚚 שעות המשלוחים ›</button>
                     </div>
                 </div>
 
                 <div id="success-box" class="success-box" role="status">
-                    <div style="font-size: 3rem; margin-bottom: 0.5rem;" aria-hidden="true">✅</div>
-                    <h3 style="font-size: 1.25rem; font-weight: bold; color: #15803d; margin-bottom: 0.5rem;">ההזמנה התקבלה בהצלחה!</h3>
+                    <div class="success-icon" aria-hidden="true">✅</div>
+                    <h3 class="success-title">ההזמנה התקבלה בהצלחה!</h3>
                     <div id="success-order-number" class="success-order-number hidden"></div>
-                    <p style="font-size: 0.875rem; color: #64748b; line-height: 1.4;">תודה רבה! פרטי ההזמנה נשלחו אלינו ונעדכן אותך בהקדם.</p>
+                    <p class="success-text">תודה רבה! ההזמנה התקבלה ואנחנו מטפלים בה.<br>ניצור איתך קשר רק אם יהיה שינוי בהזמנה.</p>
                     <div id="success-order-summary" class="success-order-summary hidden">
                         <div class="success-items-title">מה הזמנת:</div>
                         <ul id="success-order-items" class="success-order-items"></ul>
                     </div>
                     <!-- אחרי הזמנה מוצלחת: הרגע הכי טבעי לשמור אותה כרשימה קבועה -->
+                    <!-- שמירת פרטי ההזמנה אצל הלקוח: בטלפון חלון השיתוף, במחשב העתקה -->
+                    <button type="button" id="success-share-btn" class="success-share-btn hidden" onclick="shareOrderDetails()">📋 שמירת פרטי ההזמנה</button>
                     <button type="button" id="success-save-list-btn" class="success-save-list-btn hidden" onclick="saveLastOrderAsList()">⭐ שמור כרשימה קבועה</button>
-                    <button type="button" onclick="resetOrder()" style="margin-top: 1rem; background: #f1f5f9; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer; color: #475569; font-weight: 600;">התחל הזמנה חדשה</button>
+                    <button type="button" onclick="resetOrder()" class="new-order-btn">התחל הזמנה חדשה</button>
                 </div>
             </div>
             </div>
@@ -233,7 +281,8 @@
             <section class="about-section">
                 <h2>חנות הירקות של כפר חב״ד עם משלוח עד הבית</h2>
                 <p>ריבקין ירקות מביאה ירקות ופירות טריים באיכות גבוהה ובכשרות מהודרת ישירות לבית שלכם בכפר חב״ד. בוחרים מהקטלוג, שולחים הזמנה, ואנחנו אורזים ושולחים, בלי תשלום מראש. אפשר גם לבחור איסוף עצמי מהחנות.</p>
-                <p>שאלה על מוצר או הזמנה? <a href="https://wa.me/972543243599" target="_blank" rel="noopener">כתבו לנו בוואטסאפ: 054-3243599</a></p>
+                <p>שאלה על מוצר או הזמנה? <a href="https://wa.me/972543243599" target="_blank" rel="noopener">כתבו לנו בוואטסאפ: 054-3243599</a> או התקשרו לחנות: <a href="tel:+97239606030">03-9606030</a></p>
+                <p>החנות: רחוב אדמו"ר הרש"ב 11, כפר חב"ד</p>
             </section>
     </main>
 
@@ -247,15 +296,23 @@
 
     <footer>
         <p>ריבקין ירקות © 2026 | כל הזכויות שמורות</p>
-        <p style="margin-top: 0.5rem;">
-            <a href="terms.html" style="color: #64748b; text-decoration: underline;">תקנון תנאי שימוש והצהרת נגישות</a>
+        <p class="footer-links">
+            <a href="terms.html">תקנון, מדיניות פרטיות והצהרת נגישות</a>
         </p>
     </footer>
 
     <div id="kashrut-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="תעודת כשרות" onclick="closeKashrutModal(event)">
         <div class="modal-content">
             <button type="button" class="close-modal-btn" onclick="closeKashrutModal(event)" title="סגור" aria-label="סגור">✕</button>
-            <img src="image0.jpeg" alt="תעודת כשרות למהדרין - ריבקין ירקות" class="kashrut-img">
+            <img src="assets/images/kashrut.webp" width="800" height="1200" alt="תעודת כשרות למהדרין - ריבקין ירקות" class="kashrut-img">
+        </div>
+    </div>
+
+    <!-- לוח השעות המלא (התמונה נטענת רק בלחיצה, כדי לא להאט את האתר) -->
+    <div id="hours-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="לוח שעות פעילות, הזמנות ומשלוחים" onclick="closeHoursModal(event)">
+        <div class="modal-content">
+            <button type="button" class="close-modal-btn" onclick="closeHoursModal(event)" title="סגור" aria-label="סגור">✕</button>
+            <img data-src="assets/images/hours.webp" width="800" height="1403" alt="לוח שעות ריבקין ירקות: שני עד חמישי החנות פתוחה 08:30 עד 21:00, הזמנות עד 17:00, משלוחים שני ושלישי 19:00 עד 21:00, רביעי וחמישי 18:00 עד 22:00. שישי החנות פתוחה 08:30 עד 13:30, הזמנות עד 11:00, משלוחים 13:00 עד 15:00. ראשון סגור." class="kashrut-img hours-poster-img">
         </div>
     </div>
 
@@ -271,12 +328,12 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <div id="live-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-    <script src="script.js"></script>
+    <script src="js/script.js"></script>
 
     <button type="button" id="back-to-top-btn" onclick="scrollToTop()" title="חזרה למעלה" aria-label="חזרה לראש הדף"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></button>
 
     <a href="https://wa.me/972543243599?text=היי,%20אשמח%20לעזרה%20באתר%20ריבקין%20ירקות" class="whatsapp-float" target="_blank" rel="noopener" title="צור קשר בוואטסאפ" aria-label="צור קשר בוואטסאפ">
-        <img src="whatsapp.svg" alt="" class="whatsapp-icon">
+        <img src="assets/icons/whatsapp.svg" alt="" class="whatsapp-icon">
     </a>
 </body>
 </html>

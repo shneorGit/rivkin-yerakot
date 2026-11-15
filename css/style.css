@@ -183,7 +183,7 @@ main {
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    display: flex;
+    display: none; /* מוצג מהקוד כשיש טקסט בחיפוש */
     align-items: center;
     justify-content: center;
     font-size: 0.75rem;
@@ -363,6 +363,40 @@ main {
 .hours-card { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; font-size: 0.75rem; }
 .hours-grid { display: flex; flex-direction: column; gap: 0.15rem; color: #334155; line-height: 1.25; }
 
+/* לוח השעות המפורט: חלוקה לפי ימים, כמו בפוסטר */
+.hours-card { font-size: 0.8rem; padding: 1rem; }
+.hours-card .hours-title { margin-bottom: 0.5rem; }
+.hours-day { background: #ffffff; border: 1px solid #dcfce7; border-radius: 0.6rem; padding: 0.45rem 0.65rem; margin-bottom: 0.45rem; color: #334155; line-height: 1.4; }
+.hours-day-name { font-weight: 800; color: #15803d; margin-bottom: 0.15rem; }
+/* שתי עמודות: כותרת מימין, ערך משמאל, ושורות נוספות מיושרות מתחת לערך */
+.hours-table { display: grid; grid-template-columns: auto 1fr; column-gap: 0.6rem; row-gap: 0.1rem; }
+.hours-table dt { font-weight: 700; color: #0f172a; }
+.hours-table dd { margin: 0; }
+.hours-line { display: block; }
+.hours-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.1rem; }
+.hours-closed { font-weight: 700; color: #b91c1c; }
+.hours-poster-link { background: #ffffff; border: 1px solid #86efac; color: #15803d; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.7rem; border-radius: 0.6rem; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+.hours-poster-link:hover { background: #dcfce7; }
+
+/* מצב מקופל (כשיש מוצרים בסל): שתי שורות קצרות וכפתור לפירוט */
+.hours-compact { display: none; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.hours-compact-text { display: flex; flex-direction: column; gap: 0.15rem; color: #334155; font-weight: 600; line-height: 1.35; }
+.hours-expand-btn { background: #ffffff; border: 1px solid #86efac; color: #15803d; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.7rem; border-radius: 0.6rem; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
+.hours-expand-btn:hover { background: #dcfce7; }
+.hours-card.collapsed { padding: 0.65rem 0.85rem; }
+.hours-card.collapsed .hours-full { display: none; }
+.hours-card.collapsed .hours-compact { display: flex; }
+
+/* כפתור "הסתר": מופיע רק כשהלקוח פתח את הפירוט בזמן שיש מוצרים בסל */
+.hours-footer-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end; }
+.hours-collapse-btn { display: none; background: #ffffff; border: 1px solid #cbd5e1; color: #475569; font-size: 0.78rem; font-weight: 700; padding: 0.35rem 0.6rem; border-radius: 0.6rem; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
+.hours-collapse-btn:hover { background: #f1f5f9; }
+.hours-card.user-expanded .hours-collapse-btn { display: inline-block; }
+
+/* תמונת לוח השעות: גבוהה וצרה, ולכן מוגבלת לגובה המסך ולא נמתחת */
+.hours-poster-img { width: auto; height: auto; max-width: 100%; max-height: calc(90vh - 1rem); }
+#hours-modal .modal-content { max-width: min(100%, 560px); }
+
 .checkout-form { margin-top: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
 .checkout-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 0.5rem; }
 .no-payment-badge { font-size: 0.7rem; color: #15803d; font-weight: 600; background: #dcfce7; padding: 0.125rem 0.375rem; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
@@ -440,7 +474,8 @@ footer { background: white; border-top: 1px solid #f1f5f9; margin-top: 3rem; pad
 .modal-overlay.active { opacity: 1; visibility: visible; }
 .modal-content { background: #ffffff; padding: 0.5rem; border-radius: 1rem; position: relative; max-width: 100%; max-height: 90vh; display: flex; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); transform: scale(0.95) translateY(10px); transition: transform 0.3s ease; }
 .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
-.kashrut-img { max-width: 100%; max-height: calc(90vh - 1rem); object-fit: contain; border-radius: 0.5rem; }
+.kashrut-img { width: auto; height: auto; max-width: 100%; max-height: calc(90vh - 1rem); object-fit: contain; border-radius: 0.5rem; } /* width/height: auto, כדי שהחלון יתכווץ לגודל התמונה ולא יישאר רקע לבן בצדדים */
+#kashrut-modal .modal-content { max-width: min(100%, 600px); }
 
 .close-modal-btn { position: absolute; top: -12px; right: -12px; background: #dc2626; color: white; border: none; width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); z-index: 10; transition: background 0.2s, transform 0.2s; }
 .close-modal-btn:hover { background: #b91c1c; transform: scale(1.05); }
@@ -757,6 +792,10 @@ footer { background: white; border-top: 1px solid #f1f5f9; margin-top: 3rem; pad
 .success-save-list-btn { display: block; width: 100%; max-width: 320px; margin: 1.25rem auto 0; background: #ffffff; border: 1.5px solid #b45309; color: #b45309; font-size: 0.95rem; font-weight: 700; padding: 0.7rem 1rem; border-radius: 0.75rem; cursor: pointer; transition: background 0.2s; }
 .success-save-list-btn:hover { background: #fffbeb; }
 .success-save-list-btn.saved { background: #f0fdf4; border-color: #16a34a; color: #15803d; cursor: default; }
+/* כפתור שמירת פרטי ההזמנה במסך ההצלחה */
+.success-share-btn { display: block; width: 100%; max-width: 320px; margin: 1.25rem auto 0; background: #15803d; border: 1.5px solid #15803d; color: #ffffff; font-size: 0.95rem; font-weight: 700; padding: 0.7rem 1rem; border-radius: 0.75rem; cursor: pointer; transition: background 0.2s; touch-action: manipulation; }
+.success-share-btn:hover { background: #166534; }
+.success-share-btn + .success-save-list-btn { margin-top: 0.6rem; }
 /* כמויות בתוך הסל: פלוס ומינוס סביב תג הכמות */
 .cart-item { gap: 0.5rem; padding: 0.5rem 0.6rem; }
 .cart-item-name { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; }
@@ -777,3 +816,121 @@ footer { background: white; border-top: 1px solid #f1f5f9; margin-top: 3rem; pad
     .cart-qty-val { font-size: 0.8rem; min-width: 3.6rem; }
     .cart-item .remove-btn { padding: 0.4rem; }
 }
+
+/* פס קטן מעל המוצרים כשהקטלוג השמור מתעדכן ברקע */
+.catalog-sync-note { font-size: 0.8rem; font-weight: 600; color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.6rem; padding: 0.4rem 0.75rem; margin-bottom: 0.75rem; line-height: 1.4; }
+
+/* קישור ללוח השעות בכותרת: בטלפון ובטאבלט בלבד (במחשב הלוח מוצג בעמודה הצדדית), בשורה משלו מתחת לכשרות */
+.header-hours-link { display: none; flex-basis: 100%; color: #15803d; font-weight: 700; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(21, 128, 61, 0.4); text-underline-offset: 3px; white-space: nowrap; }
+.header-hours-link:hover { color: #16a34a; text-decoration-color: #16a34a; }
+@media (max-width: 1023px) {
+    .header-hours-link { display: block; }
+}
+
+/* קישור לשעות המשלוחים בטופס ההזמנה, מתחת לכפתור השליחה */
+.checkout-hours-link { display: block; margin: 0.35rem auto 0; background: none; border: none; color: #15803d; font-size: 0.78rem; font-weight: 700; text-decoration: underline; text-decoration-color: rgba(21, 128, 61, 0.4); text-underline-offset: 3px; cursor: pointer; padding: 0.2rem 0.4rem; }
+.checkout-hours-link:hover { text-decoration-color: #15803d; }
+
+/* טלפון וטאבלט: המלבן ברוחב מלא, ולכן טקסט גדול יותר ועמודת כותרות קבועה, כדי שהשעות לא יידחסו לצד אחד */
+@media (max-width: 1023px) {
+    .hours-card { font-size: 0.85rem; }
+    .hours-table { grid-template-columns: 4.2rem 1fr; }
+    .hours-closed { white-space: nowrap; }
+    .hours-footer { flex-wrap: wrap; row-gap: 0.4rem; }
+    .hours-footer-actions { flex-wrap: nowrap; margin-inline-start: auto; }
+    .hours-day { padding: 0.55rem 0.8rem; }
+    .hours-poster-link, .hours-collapse-btn, .hours-expand-btn { font-size: 0.85rem; padding: 0.45rem 0.8rem; }
+}
+
+/* ==========================================
+   רכיבים שהעיצוב שלהם היה כתוב בתוך ה-HTML
+   ========================================== */
+.catalog-title { margin-bottom: 0; }
+.list-actions-title { font-weight: bold; margin-bottom: 0.75rem; color: #0f172a; display: flex; align-items: center; gap: 0.25rem; }
+.list-actions-text { font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem; }
+.cart-empty { color: #64748b; font-size: 0.875rem; text-align: center; padding: 1.5rem 0; }
+.delivery-cost.is-placeholder { visibility: hidden; } /* שומר על גובה שווה לשני הכפתורים */
+.checkout-title { font-size: 0.875rem; font-weight: bold; color: #334155; }
+.hp-field { display: none; } /* שדה מלכודת לבוטים */
+.checkout-hours-line a { color: #15803d; }
+.success-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.success-title { font-size: 1.25rem; font-weight: bold; color: #15803d; margin-bottom: 0.5rem; }
+.success-text { font-size: 0.875rem; color: #64748b; line-height: 1.4; }
+.new-order-btn { margin-top: 1rem; background: #f1f5f9; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer; color: #475569; font-weight: 600; }
+.footer-links { margin-top: 0.5rem; }
+.footer-links a { color: #64748b; text-decoration: underline; }
+
+/* ==========================================
+   דף התקנון (terms.html)
+   ========================================== */
+.terms-container { 
+    max-width: 800px; 
+    margin: 0 auto; 
+    padding: 2rem; 
+    background: white; 
+    border-radius: 1rem; 
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.terms-title { 
+    font-size: 1.5rem; 
+    color: #16a34a; 
+    margin-bottom: 1.5rem; 
+    border-bottom: 2px solid #f0fdf4; 
+    padding-bottom: 0.75rem; 
+    font-weight: 900;
+}
+.terms-container h3 { 
+    font-size: 1.1rem; 
+    color: #0f172a; 
+    margin-top: 1.75rem; 
+    margin-bottom: 0.5rem; 
+    font-weight: bold;
+}
+.terms-container p, .terms-container ul { 
+    font-size: 0.95rem; 
+    color: #475569; 
+    line-height: 1.6; 
+    margin-bottom: 1rem; 
+}
+.terms-container ul { 
+    padding-right: 1.25rem; 
+}
+.terms-container li { 
+    margin-bottom: 0.5rem; 
+}
+.back-link { 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    color: #16a34a; 
+    font-weight: bold; 
+    text-decoration: none; 
+    margin-bottom: 1.5rem; 
+    font-size: 0.95rem; 
+    background: #f0fdf4;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: background 0.2s;
+}
+.back-link:hover {
+    background: #dcfce7;
+}
+.terms-updated { font-size: 0.85rem; color: #64748b; margin-top: -0.75rem; margin-bottom: 1.25rem; }
+.terms-container h4 { font-size: 0.98rem; color: #0f172a; margin-top: 1rem; margin-bottom: 0.35rem; font-weight: bold; }
+.terms-container a { color: #15803d; font-weight: 600; }
+@media (max-width: 767px) { .terms-container { padding: 1.25rem; } }
+
+/* ==========================================
+   דף 404
+   ========================================== */
+.page-404 main { flex: 1; } /* הפוטר נשאר בתחתית המסך גם כשהתוכן קצר */
+.logo-link { text-decoration: none; color: inherit; }
+.not-found { max-width: 520px; margin: 2rem auto; text-align: center; background: #ffffff; border: 1px solid #f1f5f9; border-radius: 1rem; padding: 2.5rem 1.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+.not-found-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+.not-found h2 { font-size: 1.4rem; font-weight: 900; color: #0f172a; margin-bottom: 0.5rem; }
+.not-found p { color: #475569; line-height: 1.6; margin-bottom: 1.5rem; }
+.not-found-btn { display: inline-block; background: #15803d; color: #ffffff; font-weight: 700; padding: 0.75rem 1.5rem; border-radius: 0.75rem; text-decoration: none; transition: background 0.2s; }
+.not-found-btn:hover { background: #166534; }
+.not-found-contact { margin-top: 1.25rem; font-size: 0.9rem; }
+.not-found-contact a { color: #15803d; font-weight: 600; }

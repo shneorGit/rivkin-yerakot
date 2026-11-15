@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://rivkin-yerakot.netlify.app/sitemap.xml
+Sitemap: https://rivkinyerakot.net/sitemap.xml

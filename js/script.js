@@ -62,6 +62,7 @@
     let deliveryMethod = 'delivery';
     let lastCartCount = null;
     let lastOrderList = null; // ההזמנה האחרונה שנשלחה, לשמירה כרשימה קבועה ממסך ההצלחה
+    let lastOrderReceipt = null; // פרטי ההזמנה האחרונה, לכפתור "שמירת פרטי ההזמנה"
 
     const escapeHTML = (str) => {
         if (!str) return '';
@@ -172,8 +173,7 @@
         if (overlay) overlay.classList.remove('active');
 
         if (dialogQueue.length === 0) {
-            const kashrut = $('kashrut-modal');
-            if (!(kashrut && kashrut.classList.contains('active'))) document.body.style.overflow = '';
+            if (!getOpenImageModal()) document.body.style.overflow = '';
             const toFocus = dialogLastFocus;
             dialogLastFocus = null;
             if (toFocus && typeof toFocus.focus === 'function' && document.contains(toFocus)) {
@@ -350,13 +350,160 @@
         loadProducts();
     }
 
-    async function loadProducts() {
-        try {
-            const response = await fetchWithTimeout(SCRIPT_URL, {}, LOAD_TIMEOUT_MS);
-            if (!response.ok) throw new Error('HTTP ' + response.status);
-            const data = await response.json();
-            if (!Array.isArray(data)) throw new Error('Unexpected catalog response');
+    // ------------------------------------------
+    // טעינה מהירה ויציבה של הקטלוג:
+    // 1. קטלוג שמור מהביקור הקודם מוצג מיד, ומתעדכן ברקע.
+    // 2. אם גוגל איטי, נשלחת בקשה נוספת בלי לבטל את הקודמת. הראשונה שעונה מנצחת.
+    // ------------------------------------------
+    const CATALOG_CACHE_KEY = 'rivkin_catalog_v1';
+    const CATALOG_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // קטלוג ישן משבוע לא מוצג
+    const LOAD_ATTEMPT_DELAYS_MS = [0, 4000, 10000];           // מתי יוצאת כל בקשה
+    const SLOW_NOTICE_MS = 4000;                               // מתי מופיעה ההודעה "לוקח יותר זמן"
+    let loadInFlight = false;
 
+    function readCachedCatalog() {
+        const cached = safeParse(CATALOG_CACHE_KEY, null);
+        if (!cached || !Array.isArray(cached.data) || typeof cached.t !== 'number') return null;
+        if (Date.now() - cached.t > CATALOG_CACHE_MAX_AGE_MS) return null;
+        return cached.data;
+    }
+
+    function writeCachedCatalog(data) {
+        safeSetItem(CATALOG_CACHE_KEY, JSON.stringify({ t: Date.now(), data: data }));
+    }
+
+    // בקשה אחת לקטלוג. מחזירה את המערך, או נכשלת
+    async function fetchCatalogOnce(signal) {
+        const response = await fetch(SCRIPT_URL, { signal: signal, cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        if (!Array.isArray(data)) throw new Error('Unexpected catalog response');
+        return data;
+    }
+
+    // כמה בקשות במדורג. בקשה שנכשלה מהר מקדימה את הבאה בתור
+    function fetchCatalogWithRetries(onSlow) {
+        return new Promise((resolve, reject) => {
+            const controllers = [];
+            const timers = [];
+            let launched = 0;
+            let failed = 0;
+            let done = false;
+
+            const finish = (ok, value) => {
+                if (done) return;
+                done = true;
+                timers.forEach(clearTimeout);
+                controllers.forEach(c => { try { c.abort(); } catch (e) { /* התעלמות */ } });
+                ok ? resolve(value) : reject(value);
+            };
+
+            const launch = () => {
+                if (done || launched >= LOAD_ATTEMPT_DELAYS_MS.length) return;
+                launched++;
+                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                if (controller) controllers.push(controller);
+                fetchCatalogOnce(controller ? controller.signal : undefined)
+                    .then(data => finish(true, data))
+                    .catch(err => {
+                        if (done) return;
+                        failed++;
+                        console.warn('ניסיון טעינה נכשל:', err && err.message);
+                        if (failed >= LOAD_ATTEMPT_DELAYS_MS.length) finish(false, err);
+                        else if (failed >= launched) launch(); // אין בקשה פעילה: לא מחכים לתור
+                    });
+            };
+
+            LOAD_ATTEMPT_DELAYS_MS.forEach(delay => {
+                timers.push(setTimeout(launch, delay));
+            });
+            timers.push(setTimeout(() => { if (!done && onSlow) onSlow(); }, SLOW_NOTICE_MS));
+            timers.push(setTimeout(() => finish(false, new Error('Catalog load timed out')), LOAD_TIMEOUT_MS));
+        });
+    }
+
+    // פס קטן מעל המוצרים: "מעדכן מחירים ומלאי"
+    function setSyncNote(text) {
+        let note = $('catalog-sync-note');
+        const grid = $('products-grid');
+        if (!text) {
+            if (note) note.remove();
+            return;
+        }
+        if (!note && grid && grid.parentNode) {
+            note = document.createElement('div');
+            note.id = 'catalog-sync-note';
+            note.className = 'catalog-sync-note';
+            note.setAttribute('role', 'status');
+            grid.parentNode.insertBefore(note, grid);
+        }
+        if (note) note.textContent = text;
+    }
+
+    function setGridLoadingText(text) {
+        const note = document.querySelector('#products-grid .grid-note');
+        if (note) note.textContent = text;
+    }
+
+    // מוצרים שבסל ולא יהיו זמינים לפי הקטלוג החדש (אזלו, נמחקו או שהיחידה כבר לא קיימת)
+    function findCartItemsToRemove(newProducts) {
+        return Object.keys(cart).filter(id => {
+            const product = newProducts.find(p => p.id == id);
+            return !product || !isUnitValidForProduct(product, cart[id].unit);
+        });
+    }
+
+    async function loadProducts() {
+        if (loadInFlight) return;
+        loadInFlight = true;
+
+        // שלב 1: קטלוג שמור מוצג מיד (בלי להוריד מהסל כלום, כי הוא עלול להיות ישן)
+        let shownFromCache = false;
+        if (products.length === 0) {
+            const cachedData = readCachedCatalog();
+            if (cachedData) {
+                try {
+                    applyCatalog(cachedData, { fromCache: true });
+                    shownFromCache = products.length > 0;
+                } catch (e) {
+                    console.warn('קטלוג שמור פגום, מתעלמים ממנו', e);
+                    safeRemoveItem(CATALOG_CACHE_KEY);
+                }
+            }
+        }
+        if (shownFromCache) setSyncNote('⟳ מעדכן מחירים ומלאי...');
+
+        // שלב 2: קטלוג עדכני מהגיליון
+        try {
+            const data = await fetchCatalogWithRetries(() => {
+                if (shownFromCache) return;
+                setGridLoadingText('הטעינה לוקחת קצת יותר זמן מהרגיל, עוד רגע...');
+            });
+
+            const nameById = {};
+            products.forEach(p => { nameById[p.id] = p.rawName; });
+
+            applyCatalog(data, { fromCache: false, previousNames: nameById });
+            writeCachedCatalog(data);
+            setSyncNote('');
+        } catch (error) {
+            console.error('Error loading products:', error);
+            if (shownFromCache) {
+                // יש מוצרים על המסך: לא מסתירים אותם, רק מציינים שלא התעדכנו
+                setSyncNote('לא הצלחנו לעדכן את המחירים והמלאי כרגע. ההזמנה תיבדק מול המלאי העדכני בשליחה.');
+            } else {
+                renderLoadError();
+            }
+        } finally {
+            loadInFlight = false;
+        }
+    }
+
+    // מציג קטלוג (שמור או עדכני) על המסך
+    function applyCatalog(data, opts) {
+        const fromCache = !!(opts && opts.fromCache);
+        const previousNames = (opts && opts.previousNames) || {};
+        {
             let all = data.map(mapRow);
 
             // מתעלם משורות לא שלמות בגיליון (בלי מזהה, שם או מחיר), כדי שמוצר חצי-מלא לא יעלה לאתר
@@ -380,14 +527,45 @@
             categoryOrder = [...new Set(products.map(p => p.categoryRaw))];
             // מוצרים שמסומנים "כן" בעמודה "חדש" עולים למעלה; כל השאר נשארים בסדר הגיליון
             products = [...products.filter(p => p.isNew), ...products.filter(p => !p.isNew)];
-            reconcileCartWithCatalog();
+
+            // רק קטלוג עדכני מוריד מוצרים מהסל, ואז הלקוח מקבל הודעה ברורה
+            let removedNames = [];
+            if (!fromCache && products.length > 0) {
+                removedNames = findCartItemsToRemove(products)
+                    .map(id => unavailableNames[id] || previousNames[id])
+                    .filter(Boolean);
+                reconcileCartWithCatalog();
+            }
+
+            // קטגוריה שנבחרה ונעלמה בעדכון: חוזרים ל"הכל"
+            if (currentCategory !== 'הכל' && !categoryOrder.includes(currentCategory)) {
+                currentCategory = 'הכל';
+            }
+
+            // שומרים על הפוקוס ועל מיקום הגלילה כשהקטלוג מתעדכן מתחת לידיים של הלקוח
+            const active = document.activeElement;
+            const activeId = active && active.id ? active.id : null;
+            const scrollY = window.scrollY;
 
             renderCategories();
             renderProducts();
             renderCart();
-        } catch (error) {
-            console.error('Error loading products:', error);
-            renderLoadError();
+
+            if (activeId && activeId !== 'search-input') {
+                const again = $(activeId);
+                if (again && again !== document.activeElement) {
+                    try { again.focus({ preventScroll: true }); } catch (e) { again.focus(); }
+                }
+            }
+            if (!fromCache && Math.abs(window.scrollY - scrollY) > 2) window.scrollTo(0, scrollY);
+
+            if (removedNames.length > 0) {
+                const msg = removedNames.length === 1
+                    ? removedNames[0] + ' אזל מהמלאי והוסר מהסל'
+                    : removedNames.join(', ') + ' אזלו מהמלאי והוסרו מהסל';
+                showToast(msg, 7000);
+                announce(msg);
+            }
         }
     }
 
@@ -796,6 +974,13 @@
 
         const validItemIds = getValidItemIds();
 
+        // הלקוח הוסיף מוצר בזמן שמסך "ההזמנה התקבלה" עדיין פתוח: זו הזמנה חדשה,
+        // ולכן סוגרים את מסך ההצלחה ומציגים סל וטופס רגילים
+        if (validItemIds.length > 0 && isSuccessScreenOpen()) {
+            closeSuccessScreen(true);
+            announce('התחלת הזמנה חדשה');
+        }
+
         if (validItemIds.length === 0) {
             // כשהסל ריק - מסתירים את כל הבלוק של סיכום ההזמנה
             if (cartSection) cartSection.classList.add('hidden');
@@ -858,6 +1043,8 @@
 
         if (cartBadge) cartBadge.textContent = validItemIds.length;
 
+        updateHoursCard(cartHasItems);
+
         if (lastCartCount !== null && lastCartCount !== validItemIds.length) {
             announce(validItemIds.length === 0 ? 'הסל ריק' : 'בסל ' + validItemIds.length + ' פריטים');
         }
@@ -919,6 +1106,38 @@
                 stickyCartBar.classList.remove('suggest-list');
             }
         }
+    }
+
+    // ==========================================
+    // לוח השעות: מתקפל כשיש מוצרים בסל, כדי שסיכום ההזמנה יעלה למעלה
+    // ==========================================
+    let hoursExpandedByUser = false;
+
+    function updateHoursCard(cartHasItems) {
+        const card = $('hours-card');
+        if (!card) return;
+        if (!cartHasItems) hoursExpandedByUser = false; // סל ריק: חוזרים לברירת המחדל
+        card.classList.toggle('collapsed', cartHasItems && !hoursExpandedByUser);
+        card.classList.toggle('user-expanded', cartHasItems && hoursExpandedByUser);
+        const btn = document.querySelector('.hours-expand-btn');
+        if (btn) btn.setAttribute('aria-expanded', hoursExpandedByUser ? 'true' : 'false');
+    }
+
+    function focusQuietly(el) {
+        if (!el) return;
+        try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+    }
+
+    function expandHoursCard() {
+        hoursExpandedByUser = true;
+        updateHoursCard(getValidItemIds().length > 0);
+        focusQuietly(document.querySelector('#hours-full .hours-poster-link'));
+    }
+
+    function collapseHoursCard() {
+        hoursExpandedByUser = false;
+        updateHoursCard(getValidItemIds().length > 0);
+        focusQuietly(document.querySelector('.hours-expand-btn'));
     }
 
     // לחיצה על הפס התחתון: עם סל מלא עוברים אליו, עם סל ריק ורשימה קבועה טוענים אותה
@@ -1229,6 +1448,16 @@
             lastOrderList = {};
             validItemIds.forEach(id => { lastOrderList[id] = { qty: cart[id].qty, unit: cart[id].unit }; });
             showSuccessSaveButton();
+
+            // פרטי ההזמנה לכפתור "שמירת פרטי ההזמנה"
+            lastOrderReceipt = {
+                orderNumber: orderNumber,
+                date: new Date(),
+                items: summaryItems.slice(),
+                pickup: deliveryMethod !== 'delivery',
+                address: rawAddress
+            };
+            showShareButton();
             $('cart-content-wrapper').style.display = 'none';
             const successBox = $('success-box');
             successBox.classList.add('active');
@@ -1286,12 +1515,102 @@
         checkFixedListStatus();
     }
 
-    function resetOrder() {
-        cart = {};
+    // ==========================================
+    // שמירת פרטי ההזמנה אצל הלקוח (מסך ההצלחה)
+    // ==========================================
+    const STORE_PHONES_LINE = 'לשינויים: 054-3243599 (וואטסאפ) / 03-9606030';
+    const PICKUP_LINE = '🛍️ איסוף עצמי מהחנות, רח\' אדמו"ר הרש"ב 11';
+
+    function showShareButton() {
+        const btn = $('success-share-btn');
+        if (btn) btn.classList.toggle('hidden', !(lastOrderReceipt && lastOrderReceipt.items.length));
+    }
+
+    function formatIsraelDate(d) {
+        try {
+            return new Intl.DateTimeFormat('he-IL', {
+                timeZone: 'Asia/Jerusalem', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
+            }).format(d);
+        } catch (e) {
+            return d.toLocaleDateString();
+        }
+    }
+
+    function buildReceiptText(r) {
+        const lines = [];
+        lines.push('ריבקין ירקות' + (r.orderNumber ? " – הזמנה מס' " + r.orderNumber : ' – פרטי הזמנה'));
+        lines.push(formatIsraelDate(r.date));
+        lines.push('');
+        r.items.forEach(it => lines.push('• ' + it.name + ' – ' + it.qty + ' ' + it.unit));
+        lines.push('');
+        lines.push(r.pickup ? PICKUP_LINE : '🚚 משלוח לכתובת: ' + r.address);
+        lines.push('הסכום הסופי ייקבע לפי השקילה.');
+        lines.push(STORE_PHONES_LINE);
+        return lines.join('\n');
+    }
+
+    async function copyText(text) {
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+        } catch (e) { /* נופלים לשיטה הישנה */ }
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return ok;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    async function shareOrderDetails() {
+        if (!lastOrderReceipt) return;
+        const text = buildReceiptText(lastOrderReceipt);
+
+        // טלפון (ורוב המחשבים החדשים): חלון השיתוף של המכשיר
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: 'ההזמנה שלי מריבקין ירקות', text: text });
+                return;
+            } catch (e) {
+                if (e && e.name === 'AbortError') return; // הלקוח סגר את חלון השיתוף
+                // שיתוף לא זמין בפועל: ממשיכים להעתקה
+            }
+        }
+
+        if (await copyText(text)) {
+            showToast('פרטי ההזמנה הועתקו. אפשר להדביק אותם בכל מקום ✔', 3800);
+            announce('פרטי ההזמנה הועתקו');
+            return;
+        }
+
+        // אין שיתוף ואין העתקה: מציגים את הטקסט, ואפשר לסמן ולהעתיק ידנית
+        await showMessage(text, { title: 'פרטי ההזמנה שלך' });
+    }
+
+    function isSuccessScreenOpen() {
+        const box = $('success-box');
+        return !!(box && box.classList.contains('active'));
+    }
+
+    // סוגר את מסך ההצלחה ומחזיר את טופס ההזמנה, בלי לגעת בסל.
+    // keepDeliveryMethod: כשהלקוח פשוט ממשיך לקנות, משאירים את הבחירה שלו (משלוח / איסוף)
+    function closeSuccessScreen(keepDeliveryMethod) {
         lastOrderList = null;
+        lastOrderReceipt = null;
+        const shareBtn = $('success-share-btn');
+        if (shareBtn) shareBtn.classList.add('hidden');
         const successSaveBtn = $('success-save-list-btn');
         if (successSaveBtn) successSaveBtn.classList.add('hidden');
-        saveCart();
 
         const notesEl = $('cust-notes');
         if (notesEl) notesEl.value = '';
@@ -1309,8 +1628,13 @@
         $('success-box').classList.remove('active');
         $('cart-content-wrapper').style.display = 'block';
 
-        setDeliveryMethod('delivery');
+        if (!keepDeliveryMethod) setDeliveryMethod('delivery');
+    }
 
+    function resetOrder() {
+        cart = {};
+        saveCart();
+        closeSuccessScreen(false);
         renderProducts();
         renderCart();
     }
@@ -1327,37 +1651,50 @@
     function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
     // ==========================================
-    // חלון תעודת הכשרות
+    // חלונות תמונה: תעודת הכשרות ולוח השעות
     // ==========================================
-    let kashrutLastFocus = null;
+    let imageModalLastFocus = null;
 
-    function isKashrutOpen() {
-        const modal = $('kashrut-modal');
-        return !!(modal && modal.classList.contains('active'));
+    function getOpenImageModal() {
+        return document.querySelector('.modal-overlay.active');
     }
 
-    function openKashrutModal() {
-        const modal = $('kashrut-modal');
+    function isKashrutOpen() {
+        return !!getOpenImageModal();
+    }
+
+    function openImageModal(id) {
+        const modal = $(id);
         if (!modal) return;
-        kashrutLastFocus = document.activeElement;
+        // תמונה שמסומנת לטעינה מאוחרת נטענת רק בפתיחה הראשונה
+        modal.querySelectorAll('img[data-src]').forEach(img => {
+            img.src = img.dataset.src;
+            img.removeAttribute('data-src');
+        });
+        imageModalLastFocus = document.activeElement;
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
         const closeBtn = modal.querySelector('.close-modal-btn');
         if (closeBtn) closeBtn.focus();
     }
 
-    function closeKashrutModal(event) {
+    function closeImageModal(event) {
         if (event && event.target && event.target.closest('.modal-content') && !event.target.classList.contains('close-modal-btn')) return;
-        const modal = $('kashrut-modal');
-        if (!modal || !modal.classList.contains('active')) return;
+        const modal = getOpenImageModal();
+        if (!modal) return;
         modal.classList.remove('active');
         if (!currentDialog) document.body.style.overflow = '';
-        const toFocus = kashrutLastFocus;
-        kashrutLastFocus = null;
+        const toFocus = imageModalLastFocus;
+        imageModalLastFocus = null;
         if (toFocus && typeof toFocus.focus === 'function' && document.contains(toFocus)) {
             try { toFocus.focus(); } catch (e) { /* התעלמות */ }
         }
     }
+
+    function openKashrutModal() { openImageModal('kashrut-modal'); }
+    function closeKashrutModal(event) { closeImageModal(event); }
+    function openHoursModal() { openImageModal('hours-modal'); }
+    function closeHoursModal(event) { closeImageModal(event); }
 
     window.addEventListener('scroll', () => {
         const btn = $('back-to-top-btn');
@@ -1400,7 +1737,8 @@
                 closeKashrutModal();
             } else if (event.key === 'Tab') {
                 event.preventDefault();
-                const closeBtn = document.querySelector('#kashrut-modal .close-modal-btn');
+                const openModal = getOpenImageModal();
+                const closeBtn = openModal ? openModal.querySelector('.close-modal-btn') : null;
                 if (closeBtn) closeBtn.focus();
             }
         }
@@ -1464,7 +1802,7 @@
         let daysAhead = 0;
         do { next = (next + 1) % 7; daysAhead++; } while (ORDER_CUTOFF[next] === undefined && daysAhead < 7);
 
-        const when = next === 5 ? 'ביום שישי בבוקר' : 'ביום ' + DAY_NAMES[next] + ' מ־09:00';
+        const when = next === 5 ? 'ביום שישי בבוקר' : 'ביום ' + DAY_NAMES[next] + ' מ־08:30';
         let opening;
         if (day === 6) opening = 'שבת שלום! ';
         else if (ORDER_CUTOFF[day] === undefined) opening = 'החנות סגורה היום. ';
@@ -1472,7 +1810,19 @@
         return opening + 'הזמנה שתישלח עכשיו תטופל ' + when + '.';
     }
 
+    // הפס הירוק העליון: ביום שישי מציג את שעת הסיום של שישי (11:00) במקום 17:00
+    function updateAnnouncementOrders() {
+        const el = $('ann-orders');
+        if (!el) return;
+        const isFriday = israelNow().day === 5;
+        const html = isFriday
+            ? '📋 הזמנות <span class="ann-long">מתקבלות </span>היום עד <span class="ann-long">השעה </span>11:00'
+            : '📋 הזמנות <span class="ann-long">מתקבלות </span>עד <span class="ann-long">השעה </span>17:00';
+        if (el.innerHTML !== html) el.innerHTML = html;
+    }
+
     function updateOrderHoursNotice() {
+        updateAnnouncementOrders();
         const message = getOrderHoursMessage();
         ['order-hours-notice', 'checkout-hours-notice'].forEach(id => {
             const el = $(id);
@@ -1496,6 +1846,10 @@
     window.scrollToTop = scrollToTop;
     window.openKashrutModal = openKashrutModal;
     window.closeKashrutModal = closeKashrutModal;
+    window.openHoursModal = openHoursModal;
+    window.expandHoursCard = expandHoursCard;
+    window.collapseHoursCard = collapseHoursCard;
+    window.closeHoursModal = closeHoursModal;
     window.setDeliveryMethod = setDeliveryMethod;
     window.saveFixedList = saveFixedList;
     window.loadFixedList = loadFixedList;
@@ -1505,6 +1859,7 @@
     window.handleStickyBarClick = handleStickyBarClick;
     window.saveLastOrderAsList = saveLastOrderAsList;
     window.changeCartQty = changeCartQty;
+    window.shareOrderDetails = shareOrderDetails;
 
     function init() {
         // שגיאה בשדה נעלמת ברגע שהלקוח מתחיל לתקן
@@ -1517,6 +1872,11 @@
         document.querySelectorAll('.kashrut-link').forEach(el => {
             el.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openKashrutModal(); }
+            });
+        });
+        document.querySelectorAll('.header-hours-link').forEach(el => {
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHoursModal(); }
             });
         });
         const sticky = $('sticky-cart-bar');
@@ -1559,4 +1919,57 @@
     init();
     loadSavedUserDetails();
     loadProducts();
+})();
+// ==========================================
+// חזרה מהתקנון: הלקוח חוזר לאותו מקום בדף שבו לחץ על הקישור.
+// הדפדפן לא מצליח לעשות את זה לבד, כי הקטלוג נטען מגוגל רק אחרי שהדף עולה,
+// ובאותו רגע הדף עדיין קצר מדי. לכן שומרים את המיקום בלחיצה על הקישור,
+// ומחזירים אותו כשהדף חוזר ויש מספיק תוכן.
+// ==========================================
+(function () {
+    const KEY = 'rivkin-return-scroll';
+    const MAX_AGE = 30 * 60 * 1000; // חצי שעה: אחרי זה כבר לא "חזרה", אלא כניסה חדשה
+
+    // לחיצה על קישור לתקנון באותה לשונית: שומרים איפה הלקוח היה
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest && e.target.closest('a[href^="terms.html"]');
+        if (!link || link.target === '_blank') return;
+        try { sessionStorage.setItem(KEY, JSON.stringify({ y: Math.round(window.scrollY), t: Date.now() })); } catch (err) {}
+    });
+
+    function takeSaved() {
+        try {
+            const raw = sessionStorage.getItem(KEY);
+            sessionStorage.removeItem(KEY);
+            if (!raw) return null;
+            const data = JSON.parse(raw);
+            if (!data || !(data.y > 0) || Date.now() - data.t > MAX_AGE) return null;
+            return data.y;
+        } catch (err) { return null; }
+    }
+
+    // הדפדפן החזיר את הדף מהזיכרון כמו שהוא: המיקום כבר נכון, רק מנקים
+    window.addEventListener('pageshow', (e) => { if (e.persisted) takeSaved(); });
+
+    const y = takeSaved();
+    if (y === null) return;
+
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+    // אם הלקוח התחיל לגלול בעצמו, לא מזיזים לו את הדף
+    let userMoved = false;
+    const stop = () => { userMoved = true; };
+    ['wheel', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, stop, { once: true, passive: true }));
+
+    const started = Date.now();
+    (function tryRestore() {
+        if (userMoved) return;
+        const maxY = document.documentElement.scrollHeight - window.innerHeight;
+        // מחכים שהדף יהיה ארוך מספיק (הקטלוג נטען), עד 4 שניות לכל היותר
+        if (maxY >= y - 2 || Date.now() - started > 4000) {
+            window.scrollTo({ top: Math.min(y, Math.max(0, maxY)), behavior: 'instant' });
+            return;
+        }
+        setTimeout(tryRestore, 50);
+    })();
 })();

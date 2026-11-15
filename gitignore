@@ -1,0 +1,11 @@
+# קבצי מערכת
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# עורכים
+.vscode/
+.idea/
+
+# Netlify CLI
+.netlify/
