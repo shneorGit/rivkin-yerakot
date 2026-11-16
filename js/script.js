@@ -71,6 +71,15 @@
         return div.innerHTML;
     };
 
+    // תמונות המוצרים יושבות בגוגל דרייב במשקל מלא (כ-1.5 עד 2 מ"ב כל אחת).
+    // הוספת "=w<רוחב>" לכתובת גורמת לגוגל להחזיר גרסה מוקטנת (עשרות ק"ב), וזה מה שמאיץ את הטעינה.
+    // כתובת שאינה של גוגל, או שכבר יש בה גודל, נשארת כמו שהיא.
+    function sizedImage(url, width) {
+        const u = String(url || '').trim();
+        if (/^https:\/\/lh3\.googleusercontent\.com\/d\/[\w-]+$/.test(u)) return u + '=w' + width;
+        return u;
+    }
+
     // לשימוש בתוך תכונות HTML (גרשיים מוחלפים כדי שלא ישברו את התכונה)
     const escapeAttr = (str) => escapeHTML(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
@@ -729,7 +738,7 @@
         return `
             <div id="card-${p.id}" class="product-card ${isInCart ? 'in-cart' : ''}">
                 <div class="product-img-container">
-                    <img src="${escapeAttr(p.image)}" alt="${nameAttr}" class="product-img" loading="lazy">
+                    <img src="${escapeAttr(sizedImage(p.image, 480))}" alt="${nameAttr}" class="product-img" loading="lazy" decoding="async">
                     ${productBadgesHTML(p)}
                 </div>
                 <div class="product-info">
@@ -761,7 +770,7 @@
         return `
             <div class="product-card unavailable-card">
                 <div class="product-img-container">
-                    <img src="${escapeAttr(p.image)}" alt="${nameAttr}" class="product-img" loading="lazy">
+                    <img src="${escapeAttr(sizedImage(p.image, 480))}" alt="${nameAttr}" class="product-img" loading="lazy" decoding="async">
                 </div>
                 <div class="product-info">
                     <div>
@@ -1000,7 +1009,7 @@
                 return `
                     <div class="cart-item">
                         <div class="cart-item-name">
-                            <img src="${escapeAttr(product.image)}" alt="" class="cart-item-img">
+                            <img src="${escapeAttr(sizedImage(product.image, 96))}" alt="" class="cart-item-img">
                             <span class="cart-item-title">${product.name}</span>
                         </div>
                         <div class="cart-qty" role="group" aria-label="כמות: ${nameAttr}">
