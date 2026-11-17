@@ -62,7 +62,6 @@
     let deliveryMethod = 'delivery';
     let lastCartCount = null;
     let lastOrderList = null; // ההזמנה האחרונה שנשלחה, לשמירה כרשימה קבועה ממסך ההצלחה
-    let lastOrderReceipt = null; // פרטי ההזמנה האחרונה, לכפתור "שמירת פרטי ההזמנה"
 
     const escapeHTML = (str) => {
         if (!str) return '';
@@ -1263,13 +1262,32 @@
             if (typeof savedDetails.name === 'string' && nameEl) nameEl.value = savedDetails.name;
             if (typeof savedDetails.phone === 'string' && phoneEl) phoneEl.value = savedDetails.phone;
             if (typeof savedDetails.address === 'string' && addressEl) addressEl.value = savedDetails.address;
+            const emailEl = $('cust-email');
+            if (typeof savedDetails.email === 'string' && emailEl) emailEl.value = savedDetails.email;
         }
     }
 
     // ==========================================
     // מסך הצלחה
     // ==========================================
-    function fillSuccessBox(orderNumber, items) {
+    // emailInfo: { address, status } כשהלקוח השאיר מייל, אחרת null
+    function fillSuccessBox(orderNumber, items, emailInfo) {
+        const emailEl = $('success-email-note');
+        if (emailEl) {
+            emailEl.textContent = '';
+            let shown = false;
+            if (emailInfo && emailInfo.status === 'sent') {
+                // הכתובת בתוך <bdi> כדי שלא תתבלגן בתוך טקסט בעברית
+                const addr = document.createElement('bdi');
+                addr.textContent = emailInfo.address;
+                emailEl.append('📧 שלחנו את פרטי ההזמנה למייל ', addr, ' (אם לא הגיע, כדאי לבדוק גם בספאם).');
+                shown = true;
+            } else if (emailInfo && (emailInfo.status === 'failed' || emailInfo.status === 'skipped')) {
+                emailEl.textContent = 'לא הצלחנו לשלוח את פרטי ההזמנה למייל, אבל ההזמנה עצמה התקבלה.';
+                shown = true;
+            }
+            emailEl.classList.toggle('hidden', !shown);
+        }
         const numEl = $('success-order-number');
         const listEl = $('success-order-items');
         const wrap = $('success-order-summary');
@@ -1298,6 +1316,7 @@
         const phoneInput = $('cust-phone');
         const addressInput = $('cust-address');
         const notesInput = $('cust-notes');
+        const emailInput = $('cust-email');
 
         const rawName = nameInput.value.replace(/\s+/g, ' ').trim();
         const rawPhone = phoneInput.value.trim();
@@ -1307,6 +1326,7 @@
         const address = escapeHTML(rawAddress);
         const notes = escapeHTML(notesInput.value.trim());
         const phone = normalizePhone(rawPhone);
+        const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
 
         const validItemIds = getValidItemIds();
         if (validItemIds.length === 0) { await showMessage('העגלה שלך ריקה.'); return; }
@@ -1320,7 +1340,7 @@
         }
 
         // בדיקת השדות: כל השגיאות מוצגות יחד, והפוקוס עובר לראשונה
-        ['cust-name', 'cust-phone', 'cust-address', 'cust-notes'].forEach(clearFieldError);
+        ['cust-name', 'cust-phone', 'cust-email', 'cust-address', 'cust-notes'].forEach(clearFieldError);
         let firstInvalid = null;
         const fail = (inputId, message) => {
             setFieldError(inputId, message);
@@ -1331,6 +1351,10 @@
         else if (name.length > 50) fail('cust-name', 'השם ארוך מדי (עד 50 תווים)');
 
         if (!/^05\d{8}$/.test(phone)) fail('cust-phone', 'אנא הכנס מספר נייד ישראלי תקין (10 ספרות, מתחיל ב-05)');
+
+        if (email && (email.length > 100 || !/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(email) || email.includes('..'))) {
+            fail('cust-email', 'כתובת המייל לא תקינה (אפשר גם להשאיר את השדה ריק)');
+        }
 
         if (deliveryMethod === 'delivery') {
             if (address.length < 5) fail('cust-address', 'אנא הכנס כתובת מלאה: רחוב ומספר בית');
@@ -1366,6 +1390,7 @@
 
         let orderSent = false;
         let orderNumber = null;
+        let customerEmailStatus = 'none';
         let failureMessage = '';
         let failureTitle = 'ההזמנה לא נשלחה';
         let failureKind = '';
@@ -1382,6 +1407,7 @@
                 body: JSON.stringify({
                     name: name,
                     phone: phone,
+                    email: email,
                     address: finalAddress,
                     notes: notes,
                     order: orderDetails,
@@ -1403,10 +1429,12 @@
             if (result && result.status === 'success') {
                 orderSent = true;
                 orderNumber = result.orderNumber || null;
+                customerEmailStatus = result.customerEmail || 'none';
             } else if (result && result.status === 'saved_email_failed') {
                 // ההזמנה נשמרה בגיליון אבל המייל לא יצא: הלקוח יודע שנקלטה ומתבקש ליצור קשר
                 orderSent = true;
                 orderNumber = result.orderNumber || null;
+                customerEmailStatus = result.customerEmail || 'none';
                 warningMessage = 'הזמנתך נקלטה, אך אירעה תקלה בהודעה אלינו.\nכדי לוודא שהיא טופלה, צור קשר עם החנות בוואטסאפ.\nאין צורך להזמין שוב.';
             } else if (result && result.status === 'duplicate') {
                 // אותה הזמנה בדיוק כבר נקלטה לפני רגע: מודיעים ללקוח, אבל לא מאפסים את הדף והסל
@@ -1445,28 +1473,20 @@
                 safeSetItem('rivkin_user_details', JSON.stringify({
                     name: rawName,
                     phone: rawPhone,
+                    email: email,
                     address: rawAddress
                 }));
             } else {
                 safeRemoveItem('rivkin_user_details');
             }
 
-            fillSuccessBox(orderNumber, summaryItems);
+            fillSuccessBox(orderNumber, summaryItems, email ? { address: email, status: customerEmailStatus } : null);
 
             // שומרים עותק של ההזמנה, כדי שאפשר יהיה לשמור אותה כרשימה קבועה ממסך ההצלחה
             lastOrderList = {};
             validItemIds.forEach(id => { lastOrderList[id] = { qty: cart[id].qty, unit: cart[id].unit }; });
             showSuccessSaveButton();
 
-            // פרטי ההזמנה לכפתור "שמירת פרטי ההזמנה"
-            lastOrderReceipt = {
-                orderNumber: orderNumber,
-                date: new Date(),
-                items: summaryItems.slice(),
-                pickup: deliveryMethod !== 'delivery',
-                address: rawAddress
-            };
-            showShareButton();
             $('cart-content-wrapper').style.display = 'none';
             const successBox = $('success-box');
             successBox.classList.add('active');
@@ -1524,88 +1544,6 @@
         checkFixedListStatus();
     }
 
-    // ==========================================
-    // שמירת פרטי ההזמנה אצל הלקוח (מסך ההצלחה)
-    // ==========================================
-    const STORE_PHONES_LINE = 'לשינויים: 054-3243599 (וואטסאפ) / 03-9606030';
-    const PICKUP_LINE = '🛍️ איסוף עצמי מהחנות, רח\' אדמו"ר הרש"ב 11';
-
-    function showShareButton() {
-        const btn = $('success-share-btn');
-        if (btn) btn.classList.toggle('hidden', !(lastOrderReceipt && lastOrderReceipt.items.length));
-    }
-
-    function formatIsraelDate(d) {
-        try {
-            return new Intl.DateTimeFormat('he-IL', {
-                timeZone: 'Asia/Jerusalem', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
-            }).format(d);
-        } catch (e) {
-            return d.toLocaleDateString();
-        }
-    }
-
-    function buildReceiptText(r) {
-        const lines = [];
-        lines.push('ריבקין ירקות' + (r.orderNumber ? " – הזמנה מס' " + r.orderNumber : ' – פרטי הזמנה'));
-        lines.push(formatIsraelDate(r.date));
-        lines.push('');
-        r.items.forEach(it => lines.push('• ' + it.name + ' – ' + it.qty + ' ' + it.unit));
-        lines.push('');
-        lines.push(r.pickup ? PICKUP_LINE : '🚚 משלוח לכתובת: ' + r.address);
-        lines.push('הסכום הסופי ייקבע לפי השקילה.');
-        lines.push(STORE_PHONES_LINE);
-        return lines.join('\n');
-    }
-
-    async function copyText(text) {
-        try {
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(text);
-                return true;
-            }
-        } catch (e) { /* נופלים לשיטה הישנה */ }
-        try {
-            const ta = document.createElement('textarea');
-            ta.value = text;
-            ta.setAttribute('readonly', '');
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            const ok = document.execCommand('copy');
-            document.body.removeChild(ta);
-            return ok;
-        } catch (e) {
-            return false;
-        }
-    }
-
-    async function shareOrderDetails() {
-        if (!lastOrderReceipt) return;
-        const text = buildReceiptText(lastOrderReceipt);
-
-        // טלפון (ורוב המחשבים החדשים): חלון השיתוף של המכשיר
-        if (navigator.share) {
-            try {
-                await navigator.share({ title: 'ההזמנה שלי מריבקין ירקות', text: text });
-                return;
-            } catch (e) {
-                if (e && e.name === 'AbortError') return; // הלקוח סגר את חלון השיתוף
-                // שיתוף לא זמין בפועל: ממשיכים להעתקה
-            }
-        }
-
-        if (await copyText(text)) {
-            showToast('פרטי ההזמנה הועתקו. אפשר להדביק אותם בכל מקום ✔', 3800);
-            announce('פרטי ההזמנה הועתקו');
-            return;
-        }
-
-        // אין שיתוף ואין העתקה: מציגים את הטקסט, ואפשר לסמן ולהעתיק ידנית
-        await showMessage(text, { title: 'פרטי ההזמנה שלך' });
-    }
-
     function isSuccessScreenOpen() {
         const box = $('success-box');
         return !!(box && box.classList.contains('active'));
@@ -1615,9 +1553,6 @@
     // keepDeliveryMethod: כשהלקוח פשוט ממשיך לקנות, משאירים את הבחירה שלו (משלוח / איסוף)
     function closeSuccessScreen(keepDeliveryMethod) {
         lastOrderList = null;
-        lastOrderReceipt = null;
-        const shareBtn = $('success-share-btn');
-        if (shareBtn) shareBtn.classList.add('hidden');
         const successSaveBtn = $('success-save-list-btn');
         if (successSaveBtn) successSaveBtn.classList.add('hidden');
 
@@ -1626,13 +1561,13 @@
 
         const hasSavedDetails = !!safeGetItem('rivkin_user_details');
         if (!hasSavedDetails) {
-            ['cust-name', 'cust-phone', 'cust-address'].forEach(id => {
+            ['cust-name', 'cust-phone', 'cust-email', 'cust-address'].forEach(id => {
                 const el = $(id);
                 if (el) el.value = '';
             });
         }
-        ['cust-name', 'cust-phone', 'cust-address', 'cust-notes'].forEach(clearFieldError);
-        fillSuccessBox(null, []);
+        ['cust-name', 'cust-phone', 'cust-email', 'cust-address', 'cust-notes'].forEach(clearFieldError);
+        fillSuccessBox(null, [], null);
 
         $('success-box').classList.remove('active');
         $('cart-content-wrapper').style.display = 'block';
@@ -1868,11 +1803,10 @@
     window.handleStickyBarClick = handleStickyBarClick;
     window.saveLastOrderAsList = saveLastOrderAsList;
     window.changeCartQty = changeCartQty;
-    window.shareOrderDetails = shareOrderDetails;
 
     function init() {
         // שגיאה בשדה נעלמת ברגע שהלקוח מתחיל לתקן
-        ['cust-name', 'cust-phone', 'cust-address', 'cust-notes'].forEach(id => {
+        ['cust-name', 'cust-phone', 'cust-email', 'cust-address', 'cust-notes'].forEach(id => {
             const el = $(id);
             if (el) el.addEventListener('input', () => clearFieldError(id));
         });

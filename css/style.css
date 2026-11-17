@@ -793,9 +793,7 @@ footer { background: white; border-top: 1px solid #f1f5f9; margin-top: 3rem; pad
 .success-save-list-btn:hover { background: #fffbeb; }
 .success-save-list-btn.saved { background: #f0fdf4; border-color: #16a34a; color: #15803d; cursor: default; }
 /* כפתור שמירת פרטי ההזמנה במסך ההצלחה */
-.success-share-btn { display: block; width: 100%; max-width: 320px; margin: 1.25rem auto 0; background: #15803d; border: 1.5px solid #15803d; color: #ffffff; font-size: 0.95rem; font-weight: 700; padding: 0.7rem 1rem; border-radius: 0.75rem; cursor: pointer; transition: background 0.2s; touch-action: manipulation; }
-.success-share-btn:hover { background: #166534; }
-.success-share-btn + .success-save-list-btn { margin-top: 0.6rem; }
+.success-email-note { margin: 0.75rem auto 0; max-width: 340px; font-size: 0.85rem; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.6rem; padding: 0.5rem 0.75rem; line-height: 1.45; overflow-wrap: anywhere; }
 /* כמויות בתוך הסל: פלוס ומינוס סביב תג הכמות */
 .cart-item { gap: 0.5rem; padding: 0.5rem 0.6rem; }
 .cart-item-name { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; }
@@ -934,3 +932,7 @@ footer { background: white; border-top: 1px solid #f1f5f9; margin-top: 3rem; pad
 .not-found-btn:hover { background: #166534; }
 .not-found-contact { margin-top: 1.25rem; font-size: 0.9rem; }
 .not-found-contact a { color: #15803d; font-weight: 600; }
+
+/* הודעה: התמונות להמחשה בלבד (מעל רשת המוצרים) */
+.images-note { margin: -0.5rem 0 1rem; font-size: 0.8rem; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.6rem; padding: 0.4rem 0.75rem; display: inline-block; }
+#cust-email { text-align: right; }

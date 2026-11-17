@@ -108,6 +108,8 @@
                     <button class="category-tab active" onclick="filterCategory('הכל', this)">הכל</button>
                 </div>
 
+                <p class="images-note">📷 התמונות באתר להמחשה בלבד. המוצרים בפועל עשויים להיראות אחרת (גודל, צבע, זן).</p>
+
                 <div id="products-grid" class="products-grid">
                     <p class="grid-note">טוען מוצרים מהחנות...</p>
                 </div>
@@ -221,6 +223,11 @@
                             <input type="tel" id="cust-phone" inputmode="tel" placeholder="050-0000000" autocomplete="tel" aria-describedby="err-cust-phone">
                             <div class="field-error" id="err-cust-phone" role="alert"></div>
                         </div>
+                        <div class="form-group">
+                            <label for="cust-email">מייל לקבלת פרטי ההזמנה (אופציונלי)</label>
+                            <input type="email" id="cust-email" inputmode="email" placeholder="name@gmail.com" autocomplete="email" dir="ltr" maxlength="100" aria-describedby="err-cust-email">
+                            <div class="field-error" id="err-cust-email" role="alert"></div>
+                        </div>
                         <div class="form-group" id="address-group">
                             <label for="cust-address">כתובת מלאה למשלוח *</label>
                             <input type="text" id="cust-address" placeholder="רחוב ומספר בית, כפר חב״ד" autocomplete="street-address" aria-describedby="err-cust-address">
@@ -262,14 +269,13 @@
                     <div class="success-icon" aria-hidden="true">✅</div>
                     <h3 class="success-title">ההזמנה התקבלה בהצלחה!</h3>
                     <div id="success-order-number" class="success-order-number hidden"></div>
+                    <div id="success-email-note" class="success-email-note hidden"></div>
                     <p class="success-text">תודה רבה! ההזמנה התקבלה ואנחנו מטפלים בה.<br>ניצור איתך קשר רק אם יהיה שינוי בהזמנה.</p>
                     <div id="success-order-summary" class="success-order-summary hidden">
                         <div class="success-items-title">מה הזמנת:</div>
                         <ul id="success-order-items" class="success-order-items"></ul>
                     </div>
                     <!-- אחרי הזמנה מוצלחת: הרגע הכי טבעי לשמור אותה כרשימה קבועה -->
-                    <!-- שמירת פרטי ההזמנה אצל הלקוח: בטלפון חלון השיתוף, במחשב העתקה -->
-                    <button type="button" id="success-share-btn" class="success-share-btn hidden" onclick="shareOrderDetails()">📋 שמירת פרטי ההזמנה</button>
                     <button type="button" id="success-save-list-btn" class="success-save-list-btn hidden" onclick="saveLastOrderAsList()">⭐ שמור כרשימה קבועה</button>
                     <button type="button" onclick="resetOrder()" class="new-order-btn">התחל הזמנה חדשה</button>
                 </div>
