@@ -9,3 +9,5 @@ desktop.ini
 
 # Netlify CLI
 .netlify/
+
+Claude outputs/
