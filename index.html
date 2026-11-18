@@ -58,9 +58,9 @@
 </head>
 <body>
 
-    <div class="announcement-bar">
-        <span class="ann-item">🚚 משלוחים בכפר חב״ד</span><span class="ann-sep" aria-hidden="true">|</span><span class="ann-item" id="ann-orders">📋 הזמנות <span class="ann-long">מתקבלות </span>עד <span class="ann-long">השעה </span>17:00</span>
-    </div>
+    <aside class="announcement-bar" aria-label="הודעות החנות">
+        <span class="ann-item"><span aria-hidden="true">🚚</span> משלוחים בכפר חב״ד</span><span class="ann-sep" aria-hidden="true">|</span><span class="ann-item" id="ann-orders"><span aria-hidden="true">📋</span> הזמנות <span class="ann-long">מתקבלות </span>עד <span class="ann-long">השעה </span>17:00</span>
+    </aside>
     <header>
         <div class="header-inner">
             <div class="logo-area">
@@ -70,8 +70,8 @@
                     <div class="subtitle">
                         <span class="tagline">ירקות טריים <span class="tag-long">באיכות גבוהה </span>עד הבית</span>
                         <span class="subtitle-sep" aria-hidden="true">|</span>
-                        <span class="kashrut-link" role="button" tabindex="0" onclick="openKashrutModal()">בכשרות מהודרת 🌿</span>
-                        <span class="header-hours-link" role="button" tabindex="0" onclick="openHoursModal()">שעות פעילות ומשלוחים 🕒</span>
+                        <button type="button" class="kashrut-link" onclick="openKashrutModal()">בכשרות מהודרת <span aria-hidden="true">🌿</span></button>
+                        <button type="button" class="header-hours-link" onclick="openHoursModal()">שעות פעילות ומשלוחים <span aria-hidden="true">🕒</span></button>
                     </div>
                 </div>
             </div>
@@ -89,7 +89,7 @@
             <div class="catalog-area">
                 <!-- פס לקוח חוזר (מובייל בלבד): מופיע רק כשיש רשימה קבועה שמורה -->
                 <div id="top-list-banner" class="top-list-banner hidden">
-                    <span>⭐ יש לך רשימה קבועה שמורה</span>
+                    <span><span aria-hidden="true">⭐</span> יש לך רשימה קבועה שמורה</span>
                     <button type="button" id="top-load-btn" class="top-list-banner-btn" onclick="loadFixedList()">טען לעגלה</button>
                 </div>
                 <!-- הודעה מחוץ לשעות ההזמנה (מתעדכנת אוטומטית) -->
@@ -97,9 +97,9 @@
                 <div class="catalog-header">
                     <div class="section-title catalog-title">הקטלוג שלנו</div>
                     <div class="search-container">
-                        <span class="search-icon">🔍</span>
+                        <span class="search-icon"><span aria-hidden="true">🔍</span></span>
                         <input type="text" id="search-input" placeholder="חיפוש מוצרים..." aria-label="חיפוש מוצרים" autocomplete="off" enterkeyhint="search" oninput="handleSearch(this.value)">
-                        <button type="button" id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" title="נקה חיפוש" aria-label="נקה חיפוש">✕</button>
+                        <button type="button" id="clear-search-btn" class="clear-search-btn" onclick="clearSearch()" title="נקה חיפוש" aria-label="נקה חיפוש"><span aria-hidden="true">✕</span></button>
                         <div id="search-status" class="sr-only" aria-live="polite"></div>
                     </div>
                 </div>
@@ -108,7 +108,7 @@
                     <button class="category-tab active" onclick="filterCategory('הכל', this)">הכל</button>
                 </div>
 
-                <p class="images-note">📷 התמונות באתר להמחשה בלבד. המוצרים בפועל עשויים להיראות אחרת (גודל, צבע, זן).</p>
+                <p class="images-note"><span aria-hidden="true">📷</span> התמונות באתר להמחשה בלבד. המוצרים בפועל עשויים להיראות אחרת (גודל, צבע, זן).</p>
 
                 <div id="products-grid" class="products-grid">
                     <p class="grid-note">טוען מוצרים מהחנות...</p>
@@ -120,7 +120,7 @@
                 <!-- לוח השעות: מלא כשהסל ריק, מתקפל לשורה קצרה כשיש מוצרים בסל (כדי שהסל יעלה למעלה) -->
                 <div id="hours-card" class="sidebar-box hours-card">
                     <div class="hours-full" id="hours-full">
-                        <div class="hours-title">🕒 שעות פעילות, הזמנות ומשלוחים</div>
+                        <div class="hours-title"><span aria-hidden="true">🕒</span> שעות פעילות, הזמנות ומשלוחים</div>
 
                         <div class="hours-day">
                             <div class="hours-day-name">שני – חמישי</div>
@@ -143,7 +143,7 @@
                         <div class="hours-footer">
                             <span class="hours-closed">ראשון: סגור</span>
                             <div class="hours-footer-actions">
-                                <button type="button" class="hours-poster-link" onclick="openHoursModal()">🖼️ לוח השעות המלא</button>
+                                <button type="button" class="hours-poster-link" onclick="openHoursModal()"><span aria-hidden="true">🖼️</span> לוח השעות המלא</button>
                                 <button type="button" class="hours-collapse-btn" onclick="collapseHoursCard()" aria-controls="hours-full">הסתר ▲</button>
                             </div>
                         </div>
@@ -151,8 +151,8 @@
 
                     <div class="hours-compact" id="hours-compact">
                         <div class="hours-compact-text">
-                            <span>🕒 הזמנות עד 17:00 · שישי עד 11:00</span>
-                            <span>🚚 משלוחים בערב · בשישי בצהריים</span>
+                            <span><span aria-hidden="true">🕒</span> הזמנות עד 17:00 · שישי עד 11:00</span>
+                            <span><span aria-hidden="true">🚚</span> משלוחים בערב · בשישי בצהריים</span>
                         </div>
                         <button type="button" class="hours-expand-btn" onclick="expandHoursCard()" aria-controls="hours-full" aria-expanded="false">פירוט</button>
                     </div>
@@ -165,15 +165,15 @@
 
                 <!-- הוספת ID class-hidden כברירת מחדל -->
                 <div id="list-actions-card" class="sidebar-box list-actions-card hidden">
-                    <div class="list-actions-title">⭐ רשימה קבועה</div>
+                    <div class="list-actions-title"><span aria-hidden="true">⭐</span> רשימה קבועה</div>
                     <p class="list-actions-text">שמור את הסל הנוכחי לשימוש חוזר או טען רשימה קיימת.</p>
                     
                     <div id="fixed-list-actions" class="fixed-list-actions">
-                        <button type="button" onclick="saveFixedList()" class="list-btn save-list-btn hidden" id="save-list-btn">⭐ שמור כרשימה</button>
+                        <button type="button" onclick="saveFixedList()" class="list-btn save-list-btn hidden" id="save-list-btn"><span aria-hidden="true">⭐</span> שמור כרשימה</button>
                         
                         <div class="load-list-wrapper hidden" id="load-list-wrapper">
-                            <button type="button" onclick="loadFixedList()" class="list-btn load-list-btn" id="load-list-btn">📥 טען רשימה קבועה</button>
-                            <button type="button" onclick="confirmDeleteFixedList()" class="delete-list-btn" title="מחק רשימה שמורה">🗑️ מחק רשימה לצמיתות</button>
+                            <button type="button" onclick="loadFixedList()" class="list-btn load-list-btn" id="load-list-btn"><span aria-hidden="true">📥</span> טען רשימה קבועה</button>
+                            <button type="button" onclick="confirmDeleteFixedList()" class="delete-list-btn" title="מחק רשימה שמורה"><span aria-hidden="true">🗑️</span> מחק רשימה לצמיתות</button>
                         </div>
                     </div>
                 </div>
@@ -187,8 +187,8 @@
 
                 <div id="cart-content-wrapper">
                     <div class="cart-tools-row">
-                        <button type="button" onclick="saveFixedList()" class="cart-save-list-btn hidden" id="cart-save-list-btn">⭐ שמור כרשימה</button>
-                        <button type="button" onclick="confirmClearCart()" class="clear-cart-btn hidden" id="clear-cart-btn" title="רוקן עגלה לגמרי" aria-label="רוקן את הסל">🗑️ רוקן סל</button>
+                        <button type="button" onclick="saveFixedList()" class="cart-save-list-btn hidden" id="cart-save-list-btn"><span aria-hidden="true">⭐</span> שמור כרשימה</button>
+                        <button type="button" onclick="confirmClearCart()" class="clear-cart-btn hidden" id="clear-cart-btn" title="רוקן עגלה לגמרי"><span aria-hidden="true">🗑️</span> רוקן סל</button>
                     </div>
 
                     <div id="cart-items" class="cart-items-list">
@@ -198,19 +198,22 @@
                     <div id="checkout-form" class="checkout-form hidden">
                         <div class="delivery-method-selector">
                             <button type="button" id="btn-delivery" class="method-btn active" onclick="setDeliveryMethod('delivery')">
-                                <span>🚚 משלוח עד הבית</span>
+                                <span><span aria-hidden="true">🚚</span> משלוח עד הבית</span>
                                 <span class="delivery-cost">(עלות: 5 ₪)</span>
                             </button>
                             <button type="button" id="btn-pickup" class="method-btn" onclick="setDeliveryMethod('pickup')">
-                                <span>🛍️ איסוף עצמי</span>
+                                <span><span aria-hidden="true">🛍️</span> איסוף עצמי</span>
                                 <span class="delivery-cost is-placeholder" aria-hidden="true">(חינם)</span>
                             </button>
                         </div>
 
+                        <!-- מתי המשלוח יגיע (מתעדכן לבד לפי השעה, החגים והימים המיוחדים) -->
+                        <div id="delivery-when" class="when-note" role="status"></div>
+
                         <div class="checkout-header-row">
                             <span id="checkout-title" class="checkout-title">פרטים למשלוח:</span>
                             <input type="text" id="bot-honeypot" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
-                            <span class="no-payment-badge">ללא תשלום מראש 🛡️</span>
+                            <span class="no-payment-badge">ללא תשלום מראש <span aria-hidden="true">🛡️</span></span>
                         </div>
 
                         <div class="form-group">
@@ -233,10 +236,35 @@
                             <input type="text" id="cust-address" placeholder="רחוב ומספר בית, כפר חב״ד" autocomplete="street-address" aria-describedby="err-cust-address">
                             <div class="field-error" id="err-cust-address" role="alert"></div>
                         </div>
-                        <div class="form-group">
-                            <label id="notes-label" for="cust-notes">הערות לשליח (אופציונלי)</label>
-                            <textarea id="cust-notes" rows="2" placeholder="למשל: קומה 2, דירה 4, להניח ליד הדלת..." aria-describedby="err-cust-notes"></textarea>
+                        <!-- איסוף עצמי: בחירת יום ושעה מתוך שעות הפתיחה -->
+                        <div class="form-group pickup-group hidden" id="pickup-group" role="group" aria-labelledby="pickup-legend">
+                            <div id="pickup-legend" class="pickup-legend">מתי תגיע לאסוף? *</div>
+                            <div class="pickup-selects">
+                                <div class="pickup-field">
+                                    <label for="pickup-day">יום</label>
+                                    <select id="pickup-day" onchange="onPickupDayChange()" aria-describedby="err-pickup-time"></select>
+                                </div>
+                                <div class="pickup-field">
+                                    <label for="pickup-time">שעה</label>
+                                    <select id="pickup-time" aria-describedby="pickup-hint err-pickup-time"></select>
+                                </div>
+                            </div>
+                            <div class="field-hint" id="pickup-hint">ההזמנה מוכנה לאיסוף לפחות שעה אחרי שליחתה, בשעות הפתיחה של החנות.</div>
+                            <div class="field-error" id="err-pickup-time" role="alert"></div>
+                        </div>
+                        <!-- הערות לשליח: רק במשלוח -->
+                        <div class="form-group" id="delivery-notes-group">
+                            <label for="cust-notes">הערות לשליח (אופציונלי)</label>
+                            <textarea id="cust-notes" rows="2" maxlength="500" placeholder="למשל: קומה 2, דירה 4, להניח ליד הדלת..." aria-describedby="err-cust-notes"></textarea>
                             <div class="field-error" id="err-cust-notes" role="alert"></div>
+                        </div>
+
+                        <!-- הערות לחנות ולמלקט: במשלוח ובאיסוף. הערה על מוצר מסוים נכתבת ליד המוצר -->
+                        <div class="form-group">
+                            <label for="cust-store-notes">הערות לחנות (אופציונלי)</label>
+                            <textarea id="cust-store-notes" rows="2" maxlength="500" placeholder="למשל: עגבניות לא בשלות מדי, לארוז בשקית נפרדת..." aria-describedby="store-notes-hint err-cust-store-notes"></textarea>
+                            <div class="field-hint" id="store-notes-hint">הערה על מוצר מסוים (גודל, בשלות) אפשר להוסיף ליד המוצר עצמו.</div>
+                            <div class="field-error" id="err-cust-store-notes" role="alert"></div>
                         </div>
 
                         <div class="save-details-group">
@@ -261,7 +289,7 @@
                         <div class="checkout-hours-line">
                             הזמנות עד 17:00 · שישי עד 11:00 · ראשון סגור
                         </div>
-                        <button type="button" class="checkout-hours-link" onclick="openHoursModal()">🚚 שעות המשלוחים ›</button>
+                        <button type="button" class="checkout-hours-link" onclick="openHoursModal()"><span aria-hidden="true">🚚</span> שעות המשלוחים ›</button>
                     </div>
                 </div>
 
@@ -269,6 +297,7 @@
                     <div class="success-icon" aria-hidden="true">✅</div>
                     <h3 class="success-title">ההזמנה התקבלה בהצלחה!</h3>
                     <div id="success-order-number" class="success-order-number hidden"></div>
+                    <div id="success-when" class="success-when hidden"></div>
                     <div id="success-email-note" class="success-email-note hidden"></div>
                     <p class="success-text">תודה רבה! ההזמנה התקבלה ואנחנו מטפלים בה.<br>ניצור איתך קשר רק אם יהיה שינוי בהזמנה.</p>
                     <div id="success-order-summary" class="success-order-summary hidden">
@@ -276,7 +305,7 @@
                         <ul id="success-order-items" class="success-order-items"></ul>
                     </div>
                     <!-- אחרי הזמנה מוצלחת: הרגע הכי טבעי לשמור אותה כרשימה קבועה -->
-                    <button type="button" id="success-save-list-btn" class="success-save-list-btn hidden" onclick="saveLastOrderAsList()">⭐ שמור כרשימה קבועה</button>
+                    <button type="button" id="success-save-list-btn" class="success-save-list-btn hidden" onclick="saveLastOrderAsList()"><span aria-hidden="true">⭐</span> שמור כרשימה קבועה</button>
                     <button type="button" onclick="resetOrder()" class="new-order-btn">התחל הזמנה חדשה</button>
                 </div>
             </div>
@@ -294,7 +323,7 @@
 
     <div id="sticky-cart-bar" class="sticky-cart-bar hidden" role="button" tabindex="0" onclick="handleStickyBarClick()">
         <div class="sticky-cart-content">
-            <span class="sticky-cart-icon">🛒</span>
+            <span class="sticky-cart-icon"><span aria-hidden="true">🛒</span></span>
             <span id="sticky-cart-text">הסל שלך (0 פריטים)</span>
         </div>
         <span id="sticky-cart-action" class="sticky-cart-action">למעבר לסל &larr;</span>
@@ -309,7 +338,7 @@
 
     <div id="kashrut-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="תעודת כשרות" onclick="closeKashrutModal(event)">
         <div class="modal-content">
-            <button type="button" class="close-modal-btn" onclick="closeKashrutModal(event)" title="סגור" aria-label="סגור">✕</button>
+            <button type="button" class="close-modal-btn" onclick="closeKashrutModal(event)" title="סגור" aria-label="סגור"><span aria-hidden="true">✕</span></button>
             <img src="assets/images/kashrut.webp" width="800" height="1200" alt="תעודת כשרות למהדרין - ריבקין ירקות" class="kashrut-img">
         </div>
     </div>
@@ -317,7 +346,7 @@
     <!-- לוח השעות המלא (התמונה נטענת רק בלחיצה, כדי לא להאט את האתר) -->
     <div id="hours-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="לוח שעות פעילות, הזמנות ומשלוחים" onclick="closeHoursModal(event)">
         <div class="modal-content">
-            <button type="button" class="close-modal-btn" onclick="closeHoursModal(event)" title="סגור" aria-label="סגור">✕</button>
+            <button type="button" class="close-modal-btn" onclick="closeHoursModal(event)" title="סגור" aria-label="סגור"><span aria-hidden="true">✕</span></button>
             <img data-src="assets/images/hours.webp" width="800" height="1403" alt="לוח שעות ריבקין ירקות: שני עד חמישי החנות פתוחה 08:30 עד 21:00, הזמנות עד 17:00, משלוחים שני ושלישי 19:00 עד 21:00, רביעי וחמישי 18:00 עד 22:00. שישי החנות פתוחה 08:30 עד 13:30, הזמנות עד 11:00, משלוחים 13:00 עד 15:00. ראשון סגור." class="kashrut-img hours-poster-img">
         </div>
     </div>
@@ -327,6 +356,7 @@
         <div class="dialog-box" role="alertdialog" aria-modal="true" aria-labelledby="app-dialog-title" aria-describedby="app-dialog-message">
             <div id="app-dialog-title" class="dialog-title"></div>
             <div id="app-dialog-message" class="dialog-message"></div>
+            <div id="app-dialog-body" class="dialog-body hidden"></div>
             <div id="app-dialog-actions" class="dialog-actions"></div>
         </div>
     </div>
@@ -338,8 +368,10 @@
 
     <button type="button" id="back-to-top-btn" onclick="scrollToTop()" title="חזרה למעלה" aria-label="חזרה לראש הדף"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></button>
 
+    <aside aria-label="יצירת קשר מהיר">
     <a href="https://wa.me/972543243599?text=היי,%20אשמח%20לעזרה%20באתר%20ריבקין%20ירקות" class="whatsapp-float" target="_blank" rel="noopener" title="צור קשר בוואטסאפ" aria-label="צור קשר בוואטסאפ">
         <img src="assets/icons/whatsapp.svg" alt="" class="whatsapp-icon">
     </a>
+    </aside>
 </body>
 </html>

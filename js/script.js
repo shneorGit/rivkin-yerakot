@@ -40,8 +40,16 @@
             if (!isFinite(qty) || qty <= 0 || qty > 999) continue;
             if (item.unit !== UNIT_PIECE && item.unit !== UNIT_KG) continue;
             clean[id] = { qty: item.qty, unit: item.unit };
+            const note = cleanNote(item.note);
+            if (note) clean[id].note = note;
         }
         return clean;
+    }
+
+    // הערה למוצר ("גדולים", "לא בשלים"...): שורה אחת, עד 80 תווים
+    const MAX_ITEM_NOTE = 80;
+    function cleanNote(value) {
+        return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, MAX_ITEM_NOTE) : '';
     }
 
     function isUnitValidForProduct(product, unit) {
@@ -105,6 +113,20 @@
         announceTimer = setTimeout(() => { el.textContent = text; }, 50);
     }
 
+    // טקסט שמתחיל באימוג'י: האימוג'י מוסתר מקורא מסך (שלא יקריא "משאית", "שעון"...)
+    const LEADING_ICON = /^([\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2190}-\u{21FF}\u{270E}]\u{FE0F}?)\s*/u;
+    function setIconText(el, text) {
+        if (!el) return;
+        text = String(text || '');
+        const m = text.match(LEADING_ICON);
+        el.textContent = '';
+        if (!m) { el.textContent = text; return; }
+        const icon = document.createElement('span');
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = m[1] + ' ';
+        el.append(icon, text.slice(m[0].length));
+    }
+
     let toastTimer = null;
     function showToast(text, ms) {
         const el = $('toast');
@@ -134,6 +156,12 @@
         return actions ? Array.from(actions.querySelectorAll('button')) : [];
     }
 
+    // כל מה שאפשר להגיע אליו במקלדת בתוך החלון (כפתורים ושדות), לפי הסדר
+    function getDialogFocusables() {
+        const box = document.querySelector('#app-dialog .dialog-box');
+        return box ? Array.from(box.querySelectorAll('button, input, textarea, select, a[href]')).filter(el => !el.disabled && el.offsetParent !== null) : [];
+    }
+
     function showNextDialog() {
         const next = dialogQueue.shift();
         if (!next) return;
@@ -150,9 +178,16 @@
         const titleEl = $('app-dialog-title');
         const messageEl = $('app-dialog-message');
         const actionsEl = $('app-dialog-actions');
+        const bodyEl = $('app-dialog-body');
         titleEl.textContent = next.options.title || '';
         messageEl.textContent = next.options.message || '';
         actionsEl.innerHTML = '';
+        if (bodyEl) {
+            bodyEl.innerHTML = '';
+            // תוכן נוסף בחלון (למשל עורך ההערה למוצר)
+            if (typeof next.options.content === 'function') next.options.content(bodyEl);
+            bodyEl.classList.toggle('hidden', !bodyEl.childNodes.length);
+        }
 
         next.options.buttons.forEach(btn => {
             const el = document.createElement('button');
@@ -293,6 +328,24 @@
         let mappedUnit = 'both';
         if (rawUnit === 'יחידות בלבד') mappedUnit = 'unit';
         else if (rawUnit === 'ק"ג בלבד') mappedUnit = 'kg';
+        // המחיר בגיליון: לק"ג במוצר "גם וגם" או "ק"ג בלבד", ליחידה במוצר "יחידות בלבד"
+        const pricePerKg = mappedUnit !== 'unit';
+
+        // הגבלת כמות (עמודה "הגבלה", 1 עד 5): רק במוצר שנמכר ביחידות.
+        // מוצר "גם וגם" שמוגבל נמכר רק ביחידות, עד שמורידים את ההגבלה
+        let limit = Number(String(item['הגבלה'] ?? '').trim());
+        if (!Number.isInteger(limit) || limit < 1 || limit > 99 || mappedUnit === 'kg') limit = 0;
+        if (limit && mappedUnit === 'both') mappedUnit = 'unit';
+
+        // תוויות מהעמודה "תוויות" (השרת מוסיף להן צבע). "מבצע" ו"חדש" עובדות כמו העמודות הישנות
+        const labels = Array.isArray(item['__labels'])
+            ? item['__labels'].filter(l => l && typeof l.t === 'string' && l.t.trim()).slice(0, 4).map(l => ({
+                t: l.t.trim(),
+                bg: /^#[0-9a-f]{6}$/i.test(l.bg) ? l.bg : '#334155',
+                fg: /^#[0-9a-f]{6}$/i.test(l.fg) ? l.fg : '#ffffff'
+            }))
+            : [];
+        const hasLabel = (t) => labels.some(l => l.t === t);
 
         let numericPrice = parseFloat(String(item['מחיר'] || '').replace(/[₪,]/g, '')) || 0;
         const categoryRaw = item['קטגוריה'] ? String(item['קטגוריה']).trim() : '';
@@ -301,8 +354,11 @@
             id: Number(item['מזהה']),
             name: escapeHTML(item['שם']),
             rawName: String(item['שם'] || '').trim(),
-            isNew: String(item['חדש'] || '').trim() === 'כן',
-            isSale: String(item['מבצע'] || '').trim() === 'כן',
+            isNew: String(item['חדש'] || '').trim() === 'כן' || hasLabel('חדש'),
+            isSale: String(item['מבצע'] || '').trim() === 'כן' || hasLabel('מבצע'),
+            labels: labels,
+            limit: limit,
+            pricePerKg: pricePerKg,
             hasId: String(item['מזהה'] === undefined || item['מזהה'] === null ? '' : item['מזהה']).trim() !== '',
             price: numericPrice,
             category: escapeHTML(categoryRaw || 'כללי'),
@@ -512,6 +568,10 @@
         const fromCache = !!(opts && opts.fromCache);
         const previousNames = (opts && opts.previousNames) || {};
         {
+            // השורה האחרונה מהשרת היא נתוני לוח הזמנים (לא מוצר)
+            const metaRow = data.find(r => r && typeof r === 'object' && r['__meta']);
+            if (metaRow) applyScheduleMeta(metaRow['__meta'], fromCache);
+            data = data.filter(r => !(r && typeof r === 'object' && r['__meta']));
             let all = data.map(mapRow);
 
             // מתעלם משורות לא שלמות בגיליון (בלי מזהה, שם או מחיר), כדי שמוצר חצי-מלא לא יעלה לאתר
@@ -538,7 +598,10 @@
 
             // רק קטלוג עדכני מוריד מוצרים מהסל, ואז הלקוח מקבל הודעה ברורה
             let removedNames = [];
+            let limitMsg = '';
             if (!fromCache && products.length > 0) {
+                limitMsg = enforceCartLimits(cart);
+                if (limitMsg) saveCart();
                 removedNames = findCartItemsToRemove(products)
                     .map(id => unavailableNames[id] || previousNames[id])
                     .filter(Boolean);
@@ -574,6 +637,7 @@
                 showToast(msg, 7000);
                 announce(msg);
             }
+            if (limitMsg) showMessage(limitMsg, { title: 'עדכון בסל' });
         }
     }
 
@@ -687,13 +751,36 @@
             .map(x => x.p);
     }
 
-    // תוויות על תמונת המוצר: "מבצע" (עמודה "מבצע" בגיליון) ו"חדש" (עמודה "חדש")
+    // תוויות על תמונת המוצר: מהעמודה "תוויות" (עם הצבע מהלשונית "תוויות"),
+    // ו"מבצע"/"חדש" מהעמודות הישנות כשהן לא נבחרו גם כתווית
     function productBadgesHTML(p) {
-        if (!p.isSale && !p.isNew) return '';
-        return '<div class="product-badges">'
-            + (p.isSale ? '<span class="product-badge sale-badge">מבצע</span>' : '')
-            + (p.isNew ? '<span class="product-badge new-badge">חדש</span>' : '')
-            + '</div>';
+        const parts = [];
+        const has = (t) => p.labels.some(l => l.t === t);
+        if (p.isSale && !has('מבצע')) parts.push('<span class="product-badge sale-badge">מבצע</span>');
+        if (p.isNew && !has('חדש')) parts.push('<span class="product-badge new-badge">חדש</span>');
+        p.labels.forEach(l => {
+            parts.push(`<span class="product-badge" style="background:${l.bg};color:${l.fg};">${escapeHTML(l.t)}</span>`);
+        });
+        return parts.length ? '<div class="product-badges">' + parts.join('') + '</div>' : '';
+    }
+
+    // השורה "עד X יח' להזמנה" מתחת למחיר, עם קישור לוואטסאפ לכמות גדולה יותר
+    function limitNoteHTML(p) {
+        if (!p.limit) return '';
+        const link = whatsappLink('היי, אשמח להזמין יותר מ-' + p.limit + ' יח\' של ' + p.rawName);
+        return `<div class="limit-note">עד ${p.limit} יח' להזמנה · <a href="${escapeAttr(link)}" target="_blank" rel="noopener">לכמות גדולה יותר</a></div>`;
+    }
+
+    function limitMessage(p) {
+        return 'אפשר להזמין עד ' + p.limit + ' יח\' ' + p.rawName + '. לכמות גדולה יותר אפשר לפנות אלינו בוואטסאפ.';
+    }
+
+    // כפתור ההערה למוצר. מוצג רק כשהמוצר בסל (לפי המחלקה in-cart של הכרטיס)
+    function itemNoteButtonHTML(p, note, inCart) {
+        const nameAttr = escapeAttr(p.rawName);
+        const icon = '<span aria-hidden="true">✎ </span>';
+        const text = icon + (note ? escapeHTML(note) : 'הוספת הערה (גודל, בשלות)');
+        return `<button type="button" class="item-note-btn ${note ? 'has-note' : ''} ${inCart ? '' : 'cart-only'}" onclick="editItemNote(${p.id})" aria-label="${note ? 'עריכת הערה: ' + nameAttr + ': ' + escapeAttr(note) : 'הוספת הערה: ' + nameAttr}">${text}</button>`;
     }
 
     function productCardHTML(p) {
@@ -731,8 +818,9 @@
             unitSelectorHTML = `<span class="unit-badge">יח'</span>`;
         }
 
-        const unitLabel = (isBoth || isKgOnly) ? 'לק״ג' : 'ליחידה';
+        const unitLabel = p.pricePerKg ? 'לק״ג' : 'ליחידה';
         const isInCart = currentItem.qty !== '' && Number(currentItem.qty) > 0;
+        const atLimit = !!p.limit && Number(currentItem.qty) >= p.limit;
 
         return `
             <div id="card-${p.id}" class="product-card ${isInCart ? 'in-cart' : ''}">
@@ -744,13 +832,14 @@
                     <div>
                         <div class="product-name">${p.name}</div>
                         <div class="product-price">₪${p.price.toFixed(2)} ${unitLabel}</div>
+                        ${limitNoteHTML(p)}
                     </div>
                     <div class="product-actions-wrapper">
                         ${quickButtonsHTML}
                         <div class="card-action-row ${isBoth ? 'has-toggle' : ''}">
                             <div class="quantity-control">
-                                <button type="button" class="qty-btn" aria-label="הוסף כמות: ${nameAttr}" onclick="changeQty(${p.id}, 1)">+</button>
-                                <input type="number" step="${inputStep}" min="0" inputmode="${inputMode}" id="qty-${p.id}" placeholder="0"
+                                <button type="button" class="qty-btn ${atLimit ? 'at-limit' : ''}" id="plus-${p.id}" aria-label="הוסף כמות: ${nameAttr}" ${atLimit ? 'aria-disabled="true"' : ''} onclick="changeQty(${p.id}, 1)">+</button>
+                                <input type="number" step="${inputStep}" min="0" ${p.limit ? 'max="' + p.limit + '"' : ''} inputmode="${inputMode}" id="qty-${p.id}" placeholder="0"
                                     aria-label="כמות: ${nameAttr}"
                                     value="${escapeAttr(qtyVal)}" oninput="updateCartItem(${p.id}, this.value)"
                                     class="product-input">
@@ -758,6 +847,7 @@
                             </div>
                             ${unitSelectorHTML}
                         </div>
+                        ${itemNoteButtonHTML(p, currentItem.note || '', isInCart)}
                     </div>
                 </div>
             </div>
@@ -850,10 +940,17 @@
         const product = products.find(p => p.id == productId);
         if (!product || !product.inStock) return;
 
-        cart[productId] = { qty: qty, unit: unit };
+        cart[productId] = withNote({ qty: qty, unit: unit }, productId);
         saveCart();
         renderProducts();
         renderCart();
+    }
+
+    // מעבירה את ההערה הקיימת של המוצר לרשומה החדשה בסל
+    function withNote(entry, productId) {
+        const note = cart[productId] && cart[productId].note;
+        if (note) entry.note = note;
+        return entry;
     }
 
     function changeQty(productId, delta) {
@@ -869,6 +966,12 @@
 
         let currentQty = cart[productId] ? parseFloat(cart[productId].qty) || 0 : 0;
         let newQty = Math.max(0, currentQty + (delta * step));
+        if (product.limit && newQty > product.limit) {
+            newQty = product.limit;
+            showToast(limitMessage(product), 5000);
+            announce(limitMessage(product));
+            if (currentQty >= product.limit) return;
+        }
 
         if (isDecimalAllowed) newQty = Math.round(newQty * 10) / 10;
 
@@ -900,15 +1003,20 @@
         if (product.unitType === 'kg') unit = 'ק״ג';
         else if (product.unitType === 'both') unit = cart[productId]?.unit || 'יח\'';
 
-        let finalVal = value;
-        if (unit !== 'ק״ג' && value.includes('.')) {
-            finalVal = Math.floor(Number(value)).toString();
+        let finalVal = String(value);
+        if (unit !== 'ק״ג' && finalVal.includes('.')) {
+            finalVal = Math.floor(Number(finalVal)).toString();
+        }
+        if (product.limit && Number(finalVal) > product.limit) {
+            finalVal = String(product.limit);
+            showToast(limitMessage(product), 5000);
+            announce(limitMessage(product));
         }
 
-        if (String(finalVal).trim() === '' || Number(finalVal) <= 0) {
+        if (finalVal.trim() === '' || Number(finalVal) <= 0) {
             delete cart[productId];
         } else {
-            cart[productId] = { qty: finalVal, unit: unit };
+            cart[productId] = withNote({ qty: finalVal, unit: unit }, productId);
         }
 
         saveCart();
@@ -926,6 +1034,12 @@
                 cardElement.classList.add('in-cart');
             }
         }
+        const plusBtn = $(`plus-${productId}`);
+        if (plusBtn && product.limit) {
+            const atLimit = Number(finalVal) >= product.limit;
+            plusBtn.classList.toggle('at-limit', atLimit);
+            if (atLimit) plusBtn.setAttribute('aria-disabled', 'true'); else plusBtn.removeAttribute('aria-disabled');
+        }
 
         renderCart();
     }
@@ -940,10 +1054,139 @@
         if (currentUnit === newUnit) return;
 
         // אי אפשר להמיר בין יחידות לק"ג, ולכן החלפת יחידה מאפסת את הכמות
-        cart[productId] = { qty: '', unit: newUnit };
+        cart[productId] = withNote({ qty: '', unit: newUnit }, productId);
         saveCart();
         renderProducts();
         renderCart();
+    }
+
+    // ==========================================
+    // הערה למוצר (גודל, בשלות...): נפתחת מכרטיס המוצר או מהסל
+    // ==========================================
+    const NOTE_CHIPS = ['גדולים', 'קטנים', 'רכים', 'קשים', 'בשלים', 'לא בשלים'];
+    // זוגות הפכים: בחירה באחד מבטלת את השני (אפשר "גדולים" + "לא בשלים", אבל לא "רכים" + "קשים")
+    const NOTE_OPPOSITES = { 'גדולים': 'קטנים', 'קטנים': 'גדולים', 'רכים': 'קשים', 'קשים': 'רכים', 'בשלים': 'לא בשלים', 'לא בשלים': 'בשלים' };
+    const MAX_NOTE_FREE_TEXT = 40;
+
+    async function editItemNote(productId) {
+        const product = products.find(p => p.id == productId);
+        const item = cart[productId];
+        if (!product || !item) return;
+
+        // פירוק ההערה הקיימת: כפתורים מוכנים בהתחלה, ואחריהם טקסט חופשי
+        const parts = (item.note || '').split(',').map(x => x.trim()).filter(Boolean);
+        // הבחירות נשמרות במשתנים בזמן העריכה, ולא נקראות מהחלון אחרי שנסגר
+        const chosen = new Set();
+        parts.filter(x => NOTE_CHIPS.includes(x)).forEach(x => { if (!chosen.has(NOTE_OPPOSITES[x])) chosen.add(x); });
+        let freeText = parts.filter(x => !NOTE_CHIPS.includes(x)).join(', ').slice(0, MAX_NOTE_FREE_TEXT);
+
+        const result = await openDialog({
+            title: 'הערה ל' + product.rawName,
+            message: 'אפשר לבחור כמה, או לכתוב בעצמך. המלקט יראה את ההערה ליד המוצר.',
+            content: (body) => {
+                const group = document.createElement('div');
+                group.className = 'note-chips';
+                group.setAttribute('role', 'group');
+                group.setAttribute('aria-label', 'הערות מוכנות');
+                NOTE_CHIPS.forEach(chip => {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'note-chip';
+                    b.textContent = chip;
+                    const on = chosen.has(chip);
+                    b.classList.toggle('active', on);
+                    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+                    b.dataset.chip = chip;
+                    b.addEventListener('click', () => {
+                        const now = b.getAttribute('aria-pressed') !== 'true';
+                        b.setAttribute('aria-pressed', now ? 'true' : 'false');
+                        b.classList.toggle('active', now);
+                        if (now) {
+                            chosen.add(chip);
+                            // ההפך שלו מתבטל
+                            const opposite = NOTE_OPPOSITES[chip];
+                            chosen.delete(opposite);
+                            const other = group.querySelector('[data-chip="' + opposite + '"]');
+                            if (other) {
+                                other.setAttribute('aria-pressed', 'false');
+                                other.classList.remove('active');
+                            }
+                        } else {
+                            chosen.delete(chip);
+                        }
+                    });
+                    group.appendChild(b);
+                });
+                const label = document.createElement('label');
+                label.className = 'note-free-label';
+                label.htmlFor = 'item-note-input';
+                label.textContent = 'הערה אחרת (אופציונלי)';
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'item-note-input';
+                input.className = 'note-free-input';
+                input.maxLength = MAX_NOTE_FREE_TEXT;
+                input.value = freeText;
+                input.placeholder = 'למשל: אחד ירוק ואחד אדום';
+                input.setAttribute('aria-describedby', 'item-note-count');
+                const counter = document.createElement('div');
+                counter.id = 'item-note-count';
+                counter.className = 'note-count';
+                const updateCounter = () => {
+                    counter.textContent = 'נשארו ' + (MAX_NOTE_FREE_TEXT - input.value.length) + ' תווים';
+                };
+                updateCounter();
+                input.addEventListener('input', () => { freeText = input.value; updateCounter(); });
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); closeDialog('save'); }
+                });
+                body.append(group, label, input, counter);
+            },
+            buttons: [
+                { label: 'שמירה', value: 'save', kind: 'primary' },
+                ...(item.note ? [{ label: 'מחיקת ההערה', value: 'delete', kind: 'secondary' }] : []),
+                { label: 'ביטול', value: 'cancel', kind: 'secondary' }
+            ],
+            cancelValue: 'cancel',
+            focusValue: 'save'
+        });
+
+        const current = cart[productId];
+        if (!current || result === 'cancel') return;
+        if (result === 'delete') {
+            delete current.note;
+        } else {
+            const picked = NOTE_CHIPS.filter(c => chosen.has(c)); // תמיד באותו סדר
+            const note = cleanNote([...picked, freeText.trim()].filter(Boolean).join(', '));
+            if (note) current.note = note; else delete current.note;
+        }
+        saveCart();
+        renderProducts();
+        renderCart();
+        announce(current.note ? 'ההערה נשמרה: ' + current.note : 'ההערה נמחקה');
+    }
+
+    // מתאים את הסל להגבלות הכמות: כמות מעל ההגבלה יורדת להגבלה,
+    // ומוצר מוגבל שהיה בסל בק"ג יוצא מהסל (נמכר עכשיו רק ביחידות).
+    // מחזיר הודעה ללקוח, או מחרוזת ריקה אם לא השתנה כלום
+    function enforceCartLimits(target) {
+        const capped = [];
+        const removed = [];
+        Object.keys(target).forEach(id => {
+            const product = products.find(p => p.id == id);
+            if (!product || !product.limit) return;
+            if (target[id].unit !== UNIT_PIECE) {
+                removed.push(product.rawName);
+                delete target[id];
+            } else if (Number(target[id].qty) > product.limit) {
+                target[id].qty = String(product.limit);
+                capped.push(product.rawName + ' (עד ' + product.limit + ' יח\')');
+            }
+        });
+        const msgs = [];
+        if (capped.length) msgs.push('הכמות עודכנה לפי ההגבלה: ' + capped.join(', ') + '.');
+        if (removed.length) msgs.push(removed.join(', ') + ' נמכר' + (removed.length > 1 ? 'ים' : '') + ' כרגע רק ביחידות, ולכן הוסר' + (removed.length > 1 ? 'ו' : '') + ' מהסל. אפשר להוסיף שוב ביחידות.');
+        return msgs.join(' ');
     }
 
     function setDeliveryMethod(method) {
@@ -951,26 +1194,34 @@
         const btnDelivery = $('btn-delivery');
         const btnPickup = $('btn-pickup');
         const addressGroup = $('address-group');
-        const notesLabel = $('notes-label');
-        const notesInput = $('cust-notes');
+        const deliveryNotesGroup = $('delivery-notes-group');
+        const storeNotesInput = $('cust-store-notes');
         const formTitle = $('checkout-title');
 
         if (method === 'delivery') {
             if (btnDelivery) btnDelivery.classList.add('active');
             if (btnPickup) btnPickup.classList.remove('active');
             if (addressGroup) addressGroup.classList.remove('hidden');
-            if (notesLabel) notesLabel.textContent = 'הערות לשליח (אופציונלי)';
-            if (notesInput) notesInput.placeholder = 'למשל: קומה 2, דירה 4, להניח ליד הדלת...';
+            if (deliveryNotesGroup) deliveryNotesGroup.classList.remove('hidden');
+            const pickupGroup = $('pickup-group');
+            if (pickupGroup) pickupGroup.classList.add('hidden');
+            clearFieldError('pickup-time');
+            if (storeNotesInput) storeNotesInput.placeholder = 'למשל: עגבניות לא בשלות מדי, לארוז בשקית נפרדת...';
             if (formTitle) formTitle.textContent = 'פרטים למשלוח:';
         } else {
             if (btnPickup) btnPickup.classList.add('active');
             if (btnDelivery) btnDelivery.classList.remove('active');
             if (addressGroup) addressGroup.classList.add('hidden');
-            if (notesLabel) notesLabel.textContent = 'הערות / מתי תגיע לאסוף?';
-            if (notesInput) notesInput.placeholder = 'למשל: אגיע לאסוף סביב השעה 16:00...';
+            if (deliveryNotesGroup) deliveryNotesGroup.classList.add('hidden');
+            const pickupGroup = $('pickup-group');
+            if (pickupGroup) pickupGroup.classList.remove('hidden');
+            renderPickupOptions();
+            if (storeNotesInput) storeNotesInput.placeholder = 'למשל: לארוז בשקית נפרדת...';
             if (formTitle) formTitle.textContent = 'פרטי הלקוח לאיסוף:';
             clearFieldError('cust-address');
+            clearFieldError('cust-notes');
         }
+        updateDeliveryWhen();
         if (btnDelivery) btnDelivery.setAttribute('aria-pressed', method === 'delivery' ? 'true' : 'false');
         if (btnPickup) btnPickup.setAttribute('aria-pressed', method === 'pickup' ? 'true' : 'false');
     }
@@ -1017,6 +1268,7 @@
                             <button type="button" class="cart-qty-btn" data-cart-qty="${id}:-1" aria-label="הפחת כמות: ${nameAttr}" onclick="changeCartQty(${id}, -1)">−</button>
                         </div>
                         <button type="button" onclick="removeItem(${id})" class="remove-btn" title="הסר פריט" aria-label="הסר מהסל: ${nameAttr}">🗑️</button>
+                        <div class="cart-item-note">${itemNoteButtonHTML(product, item.note || '', true)}</div>
                     </div>
                 `;
             }).join('');
@@ -1061,7 +1313,7 @@
         // קישור קטן לשמירת רשימה בתוך סיכום ההזמנה
         if (cartSaveBtn) {
             cartSaveBtn.classList.toggle('hidden', !cartHasItems);
-            cartSaveBtn.textContent = hasFixedList ? '🔄 עדכן רשימה קבועה' : '⭐ שמור כרשימה';
+            setIconText(cartSaveBtn, hasFixedList ? '🔄 עדכן רשימה קבועה' : '⭐ שמור כרשימה');
         }
 
         if (clearCartBtn) {
@@ -1092,7 +1344,7 @@
         if (saveBtn) {
             if (cartHasItems) {
                 saveBtn.classList.remove('hidden');
-                saveBtn.innerHTML = hasFixedList ? '🔄 עדכן רשימה קבועה' : '⭐ שמור כרשימה';
+                setIconText(saveBtn, hasFixedList ? '🔄 עדכן רשימה קבועה' : '⭐ שמור כרשימה');
             } else {
                 saveBtn.classList.add('hidden');
             }
@@ -1203,7 +1455,7 @@
         ].filter(b => b.el);
         buttons.forEach(b => { b.el.disabled = true; b.el.textContent = 'טוען...'; });
         const restoreButtons = () => {
-            buttons.forEach(b => { b.el.disabled = false; b.el.textContent = b.label; });
+            buttons.forEach(b => { b.el.disabled = false; setIconText(b.el, b.label); });
         };
 
         setTimeout(async () => {
@@ -1218,11 +1470,13 @@
                 return;
             }
 
+            const limitMsg = enforceCartLimits(savedList);
             const unavailable = [];
             let otherMissingCount = 0;
             let addedCount = 0;
 
             savedIds.forEach(id => {
+                if (!savedList[id]) return; // הוסר בגלל הגבלת כמות (ההודעה מוצגת בסוף)
                 const product = products.find(p => p.id == id);
                 if (product && isUnitValidForProduct(product, savedList[id].unit)) {
                     cart[id] = savedList[id];
@@ -1246,7 +1500,10 @@
                 message += '\n\nלתשומת לבך, המוצרים הבאים אינם זמינים כרגע ולא התווספו:';
                 if (unavailable.length > 0) message += '\n' + unavailable.join(', ');
                 if (otherMissingCount > 0) message += '\n' + (unavailable.length > 0 ? 'ועוד ' : '') + otherMissingCount + ' מוצרים שאינם נמכרים כרגע באתר.';
+                if (limitMsg) message += '\n\n' + limitMsg;
                 await showMessage(message, { title: 'חלק מהמוצרים לא נטענו' });
+            } else if (limitMsg) {
+                await showMessage('הרשימה נטענה.\n\n' + limitMsg, { title: 'הרשימה נטענה' });
             } else if (addedCount > 0) {
                 showToast('הרשימה הקבועה נטענה לעגלה ✔');
             }
@@ -1271,7 +1528,13 @@
     // מסך הצלחה
     // ==========================================
     // emailInfo: { address, status } כשהלקוח השאיר מייל, אחרת null
-    function fillSuccessBox(orderNumber, items, emailInfo) {
+    function fillSuccessBox(orderNumber, items, emailInfo, whenText) {
+        const whenEl = $('success-when');
+        if (whenEl) {
+            // "איסוף: יום שני 23/11 בשעה 09:30" / "משלוח: יום חמישי 19/11 בין 18:00–22:00"
+            setIconText(whenEl, whenText ? '🕒 ' + whenText : '');
+            whenEl.classList.toggle('hidden', !whenText);
+        }
         const emailEl = $('success-email-note');
         if (emailEl) {
             emailEl.textContent = '';
@@ -1280,7 +1543,10 @@
                 // הכתובת בתוך <bdi> כדי שלא תתבלגן בתוך טקסט בעברית
                 const addr = document.createElement('bdi');
                 addr.textContent = emailInfo.address;
-                emailEl.append('📧 שלחנו את פרטי ההזמנה למייל ', addr, ' (אם לא הגיע, כדאי לבדוק גם בספאם).');
+                const mailIcon = document.createElement('span');
+                mailIcon.setAttribute('aria-hidden', 'true');
+                mailIcon.textContent = '📧 ';
+                emailEl.append(mailIcon, 'שלחנו את פרטי ההזמנה למייל ', addr, ' (אם לא הגיע, כדאי לבדוק גם בספאם).');
                 shown = true;
             } else if (emailInfo && (emailInfo.status === 'failed' || emailInfo.status === 'skipped')) {
                 emailEl.textContent = 'לא הצלחנו לשלוח את פרטי ההזמנה למייל, אבל ההזמנה עצמה התקבלה.';
@@ -1304,7 +1570,7 @@
             listEl.innerHTML = '';
             items.forEach(it => {
                 const li = document.createElement('li');
-                li.textContent = it.name + ' – ' + it.qty + ' ' + it.unit;
+                li.textContent = it.name + ' – ' + it.qty + ' ' + it.unit + (it.note ? ' (' + it.note + ')' : '');
                 listEl.appendChild(li);
             });
         }
@@ -1316,6 +1582,7 @@
         const phoneInput = $('cust-phone');
         const addressInput = $('cust-address');
         const notesInput = $('cust-notes');
+        const storeNotesInput = $('cust-store-notes');
         const emailInput = $('cust-email');
 
         const rawName = nameInput.value.replace(/\s+/g, ' ').trim();
@@ -1324,7 +1591,9 @@
 
         const name = escapeHTML(rawName);
         const address = escapeHTML(rawAddress);
-        const notes = escapeHTML(notesInput.value.trim());
+        // הערות לשליח רק במשלוח. הערות לחנות בשתי הדרכים
+        const notes = deliveryMethod === 'delivery' ? escapeHTML(notesInput.value.trim()) : '';
+        const storeNotes = storeNotesInput ? escapeHTML(storeNotesInput.value.trim()) : '';
         const phone = normalizePhone(rawPhone);
         const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
 
@@ -1338,9 +1607,17 @@
                 return;
             }
         }
+        const limitFix = enforceCartLimits(cart);
+        if (limitFix) {
+            saveCart();
+            renderProducts();
+            renderCart();
+            await showMessage(limitFix + '\nאפשר לבדוק את הסל ולשלוח שוב.', { title: 'עדכון בסל' });
+            return;
+        }
 
         // בדיקת השדות: כל השגיאות מוצגות יחד, והפוקוס עובר לראשונה
-        ['cust-name', 'cust-phone', 'cust-email', 'cust-address', 'cust-notes'].forEach(clearFieldError);
+        ['cust-name', 'cust-phone', 'cust-email', 'cust-address', 'cust-notes', 'cust-store-notes', 'pickup-time'].forEach(clearFieldError);
         let firstInvalid = null;
         const fail = (inputId, message) => {
             setFieldError(inputId, message);
@@ -1362,6 +1639,18 @@
         }
 
         if (notes.length > 500) fail('cust-notes', 'ההערות ארוכות מדי (עד 500 תווים)');
+        if (storeNotes.length > 500) fail('cust-store-notes', 'ההערות ארוכות מדי (עד 500 תווים)');
+
+        // איסוף: חייבים לבחור יום ושעה, והשעה צריכה להיות עדיין פנויה (לפחות שעה מעכשיו)
+        let pickup = null;
+        if (deliveryMethod === 'pickup') {
+            const chosenTime = $('pickup-time') ? $('pickup-time').value : '';
+            pickup = getPickupSelection();
+            if (!pickup) {
+                renderPickupOptions();
+                fail('pickup-time', chosenTime ? 'השעה שבחרת כבר לא זמינה. אנא בחר שעה אחרת.' : 'אנא בחר יום ושעה לאיסוף');
+            }
+        }
 
         if (firstInvalid) {
             focusField(firstInvalid);
@@ -1372,11 +1661,13 @@
 
         let orderDetails = '';
         const summaryItems = [];
+        const itemNotes = []; // הערה לכל מוצר: { n: השם כמו בשורת ההזמנה, t: ההערה }
         for (const id of validItemIds) {
             const product = products.find(p => p.id == id);
             if (!product) continue;
             orderDetails += `${product.name}: ${cart[id].qty} ${cart[id].unit}\n`;
-            summaryItems.push({ name: product.rawName, qty: cart[id].qty, unit: cart[id].unit });
+            summaryItems.push({ name: product.rawName, qty: cart[id].qty, unit: cart[id].unit, note: cart[id].note || '' });
+            if (cart[id].note) itemNotes.push({ n: product.name, t: cart[id].note });
         }
 
         if (summaryItems.length > 100 || orderDetails.length > 3000) {
@@ -1390,6 +1681,7 @@
 
         let orderSent = false;
         let orderNumber = null;
+        let orderWhen = '';
         let customerEmailStatus = 'none';
         let failureMessage = '';
         let failureTitle = 'ההזמנה לא נשלחה';
@@ -1410,6 +1702,10 @@
                     email: email,
                     address: finalAddress,
                     notes: notes,
+                    storeNotes: storeNotes,
+                    itemNotes: itemNotes,
+                    pickupDate: pickup ? pickup.date : '',
+                    pickupTime: pickup ? pickup.time : '',
                     order: orderDetails,
                     hp: honeypotValue
                 })
@@ -1426,6 +1722,7 @@
                 result = null;
             }
 
+            if (result && typeof result.when === 'string') orderWhen = result.when.slice(0, 80);
             if (result && result.status === 'success') {
                 orderSent = true;
                 orderNumber = result.orderNumber || null;
@@ -1448,6 +1745,10 @@
                 failureKind = 'catalog';
                 failureTitle = 'חלק מהמוצרים השתנו';
                 failureMessage = 'חלק מהמוצרים בהזמנה השתנו באתר מאז שנכנסת.\nרענן את הדף ונסה שוב. הסל שלך נשמר.';
+            } else if (result && result.status === 'error' && result.code === 'slot_unavailable') {
+                failureKind = 'slot';
+                failureTitle = 'השעה לאיסוף לא זמינה';
+                failureMessage = 'השעה שבחרת לאיסוף כבר לא זמינה (צריך לפחות שעה להכנת ההזמנה, בשעות הפתיחה).\nאנא בחר שעה אחרת ושלח שוב. הסל שלך נשמר.';
             } else if (result && result.status === 'error' && result.code === 'rate_limited') {
                 failureTitle = 'יותר מדי הזמנות';
                 failureMessage = 'בוצעו יותר מדי הזמנות בזמן קצר.\nאפשר לנסות שוב בעוד מספר דקות, או לפנות אלינו בוואטסאפ.\nהסל שלך נשמר.';
@@ -1480,11 +1781,14 @@
                 safeRemoveItem('rivkin_user_details');
             }
 
-            fillSuccessBox(orderNumber, summaryItems, email ? { address: email, status: customerEmailStatus } : null);
+            fillSuccessBox(orderNumber, summaryItems, email ? { address: email, status: customerEmailStatus } : null, orderWhen);
 
             // שומרים עותק של ההזמנה, כדי שאפשר יהיה לשמור אותה כרשימה קבועה ממסך ההצלחה
             lastOrderList = {};
-            validItemIds.forEach(id => { lastOrderList[id] = { qty: cart[id].qty, unit: cart[id].unit }; });
+            validItemIds.forEach(id => {
+                lastOrderList[id] = { qty: cart[id].qty, unit: cart[id].unit };
+                if (cart[id].note) lastOrderList[id].note = cart[id].note;
+            });
             showSuccessSaveButton();
 
             $('cart-content-wrapper').style.display = 'none';
@@ -1498,6 +1802,11 @@
                 successBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             if (warningMessage) await showMessage(warningMessage, { title: 'הזמנתך נקלטה' });
+        } else if (failureKind === 'slot') {
+            renderPickupOptions();
+            setFieldError('pickup-time', 'אנא בחר שעה אחרת');
+            await showMessage(failureMessage, { title: failureTitle });
+            focusField('pickup-time');
         } else if (failureKind === 'catalog') {
             const refresh = await openDialog({
                 title: failureTitle,
@@ -1522,9 +1831,9 @@
         btn.classList.toggle('hidden', !hasItems);
         btn.disabled = false;
         btn.classList.remove('saved');
-        btn.textContent = safeGetItem('rivkin_fixed_list')
+        setIconText(btn, safeGetItem('rivkin_fixed_list')
             ? '🔄 עדכן את הרשימה הקבועה'
-            : '⭐ שמור כרשימה קבועה';
+            : '⭐ שמור כרשימה קבועה');
     }
 
     function saveLastOrderAsList() {
@@ -1536,7 +1845,7 @@
         }
         const btn = $('success-save-list-btn');
         if (btn) {
-            btn.textContent = '✔ נשמרה כרשימה הקבועה שלך';
+            setIconText(btn, '✔ נשמרה כרשימה הקבועה שלך');
             btn.disabled = true;
             btn.classList.add('saved');
         }
@@ -1556,8 +1865,10 @@
         const successSaveBtn = $('success-save-list-btn');
         if (successSaveBtn) successSaveBtn.classList.add('hidden');
 
-        const notesEl = $('cust-notes');
-        if (notesEl) notesEl.value = '';
+        ['cust-notes', 'cust-store-notes'].forEach(id => {
+            const el = $(id);
+            if (el) el.value = '';
+        });
 
         const hasSavedDetails = !!safeGetItem('rivkin_user_details');
         if (!hasSavedDetails) {
@@ -1566,8 +1877,8 @@
                 if (el) el.value = '';
             });
         }
-        ['cust-name', 'cust-phone', 'cust-email', 'cust-address', 'cust-notes'].forEach(clearFieldError);
-        fillSuccessBox(null, [], null);
+        ['cust-name', 'cust-phone', 'cust-email', 'cust-address', 'cust-notes', 'cust-store-notes', 'pickup-time'].forEach(clearFieldError);
+        fillSuccessBox(null, [], null, '');
 
         $('success-box').classList.remove('active');
         $('cart-content-wrapper').style.display = 'block';
@@ -1618,8 +1929,14 @@
         imageModalLastFocus = document.activeElement;
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        // הפוקוס עובר לכפתור הסגירה אחרי שהחלון כבר מוצג (אחרת הדפדפן מתעלם, והפוקוס נשאר מאחור)
         const closeBtn = modal.querySelector('.close-modal-btn');
-        if (closeBtn) closeBtn.focus();
+        if (closeBtn) {
+            closeBtn.focus();
+            requestAnimationFrame(() => setTimeout(() => {
+                if (modal.classList.contains('active') && document.activeElement !== closeBtn) closeBtn.focus();
+            }, 50));
+        }
     }
 
     function closeImageModal(event) {
@@ -1657,7 +1974,7 @@
                 return;
             }
             if (event.key === 'Tab') {
-                const buttons = getDialogButtons();
+                const buttons = getDialogFocusables();
                 if (buttons.length === 0) return;
                 const first = buttons[0];
                 const last = buttons[buttons.length - 1];
@@ -1719,50 +2036,267 @@
     // ==========================================
     // סוף קבלת ההזמנות לכל יום (בדקות מחצות). יום שלא מופיע = החנות סגורה.
     // 0 = ראשון ... 6 = שבת
-    const ORDER_CUTOFF = { 1: 17 * 60, 2: 17 * 60, 3: 17 * 60, 4: 17 * 60, 5: 11 * 60 };
-    const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    // ==========================================
+    // לוח זמנים: שעות, חגים, ימים מיוחדים, ובחירת מועד לאיסוף
+    // (אותו קוד בדיוק כמו ב-Apps Script)
+    // ==========================================
+    const Sched = (function () {
+  // ==========================================
+  // לוח הזמנים של החנות. אותו קוד בדיוק נמצא גם באתר וגם ב-Apps Script,
+  // כדי ששניהם יחשבו את אותם ימים ושעות.
+  // זמנים בדקות מחצות (510 = 08:30). ימים: 0 = ראשון ... 6 = שבת. יום שלא מופיע = סגור.
+  // ==========================================
+  var WEEK = {
+    1: { open: 510, close: 1260, cutoff: 1020, delivery: 'בין 19:00 ל-21:00' },
+    2: { open: 510, close: 1260, cutoff: 1020, delivery: 'בין 19:00 ל-21:00' },
+    3: { open: 510, close: 1260, cutoff: 1020, delivery: 'בין 18:00 ל-22:00' },
+    4: { open: 510, close: 1260, cutoff: 1020, delivery: 'בין 18:00 ל-22:00' },
+    5: { open: 510, close: 810, cutoff: 660, delivery: 'בין 13:00 ל-15:00' }
+  };
+  var SHORT_DAY = WEEK[5];        // ערב חג ו"כמו שישי" = שעות של שישי
+  var PICKUP_EARLIEST = 570;      // 09:30: שעת האיסוף הראשונה בכל יום
+  var PICKUP_BEFORE_CLOSE = 15;   // איסוף אחרון: רבע שעה לפני הסגירה
+  var PREP_MINUTES = 60;          // לפחות שעה מרגע ההזמנה ועד האיסוף
+  var SLOT_MINUTES = 15;          // הקפיצות ברשימת השעות
+  var PICKUP_DAYS = 3;            // כמה ימי פתיחה קדימה אפשר לבחור לאיסוף
+  var DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-    // השעה והיום לפי שעון ישראל, גם אם השעון במכשיר של הלקוח מוגדר אחרת
+  // ימים טובים בארץ (ראש השנה 2 ימים, יום כיפור, סוכות, שמחת תורה, פסח א' וז', שבועות), 2026 עד 2036.
+  // ערב חג (היום שלפני) מחושב לבד. אחרי 2036 צריך להוסיף שנים לרשימה.
+  var CHAG = ('20260402 20260408 20260522 20260912 20260913 20260921 20260926 20261003 20270422 20270428 20270611 20271002 20271003 ' +
+    '20271011 20271016 20271023 20280411 20280417 20280531 20280921 20280922 20280930 20281005 20281012 20290331 20290406 ' +
+    '20290520 20290910 20290911 20290919 20290924 20291001 20300418 20300424 20300607 20300928 20300929 20301007 20301012 ' +
+    '20301019 20310408 20310414 20310528 20310918 20310919 20310927 20311002 20311009 20320327 20320402 20320516 20320906 ' +
+    '20320907 20320915 20320920 20320927 20330414 20330420 20330603 20330924 20330925 20331003 20331008 20331015 20340404 ' +
+    '20340410 20340524 20340914 20340915 20340923 20340928 20341005 20350424 20350430 20350613 20351004 20351005 20351013 ' +
+    '20351018 20351025 20360412 20360418 20360601 20360922 20360923 20361001 20361006 20361013').split(' ');
+  var CHAG_SET = {};
+  for (var c = 0; c < CHAG.length; c++) CHAG_SET[CHAG[c]] = true;
+
+  // --- תאריכים כמחרוזת "20261119" ---
+  function toDate(key) { return new Date(Date.UTC(+key.slice(0, 4), +key.slice(4, 6) - 1, +key.slice(6, 8))); }
+  function toKey(d) {
+    return d.getUTCFullYear() + ('0' + (d.getUTCMonth() + 1)).slice(-2) + ('0' + d.getUTCDate()).slice(-2);
+  }
+  function addDays(key, n) { return toKey(new Date(toDate(key).getTime() + n * 86400000)); }
+  function weekday(key) { return toDate(key).getUTCDay(); }
+  function hhmm(min) { return ('0' + Math.floor(min / 60)).slice(-2) + ':' + ('0' + (min % 60)).slice(-2); }
+  function shortDate(key) { return +key.slice(6, 8) + '/' + +key.slice(4, 6); }
+
+  // special = { "20261124": { m: "closed" | "short", r: "סיבה" } } מהלשונית "ימים מיוחדים"
+  // מחזיר את שעות היום, או אובייקט עם closed: true
+  function dayInfo(key, special) {
+    var sp = special && special[key];
+    if (sp && sp.m === 'closed') return { closed: true, reason: sp.r || '' };
+    if (CHAG_SET[key]) return { closed: true, reason: 'חג' };
+    var base = WEEK[weekday(key)];
+    if (!base) return { closed: true, reason: '' };
+    var erevChag = !!CHAG_SET[addDays(key, 1)];
+    if ((sp && sp.m === 'short') || erevChag) {
+      return { open: SHORT_DAY.open, close: SHORT_DAY.close, cutoff: SHORT_DAY.cutoff, delivery: SHORT_DAY.delivery,
+               short: true, reason: (sp && sp.r) || (erevChag ? 'ערב חג' : '') };
+    }
+    return { open: base.open, close: base.close, cutoff: base.cutoff, delivery: base.delivery, short: weekday(key) === 5, reason: '' };
+  }
+
+  function isOpenForOrders(key, minutes, special) {
+    var info = dayInfo(key, special);
+    return !info.closed && minutes < info.cutoff;
+  }
+
+  function nextOpenDay(key, special) {
+    for (var i = 1; i <= 30; i++) {
+      var k = addDays(key, i);
+      if (!dayInfo(k, special).closed) return k;
+    }
+    return addDays(key, 1);
+  }
+
+  // היום שבו ההזמנה תטופל (משלוח: היום שבו יגיע): היום, אם לפני שעת הסיום, אחרת יום הפתיחה הבא
+  function handlingDay(todayKey, minutes, special) {
+    return isOpenForOrders(todayKey, minutes, special) ? todayKey : nextOpenDay(todayKey, special);
+  }
+
+  // שעות האיסוף האפשריות ביום מסוים (מערך של דקות)
+  function pickupSlots(key, todayKey, minutes, special) {
+    var info = dayInfo(key, special);
+    if (info.closed) return [];
+    var start = Math.max(PICKUP_EARLIEST, info.open);
+    if (key === todayKey) {
+      if (minutes >= info.cutoff) return [];
+      start = Math.max(start, Math.ceil((minutes + PREP_MINUTES) / SLOT_MINUTES) * SLOT_MINUTES);
+    }
+    var last = info.close - PICKUP_BEFORE_CLOSE;
+    var out = [];
+    for (var t = start; t <= last; t += SLOT_MINUTES) out.push(t);
+    return out;
+  }
+
+  // הימים שאפשר לבחור לאיסוף: עד PICKUP_DAYS ימי פתיחה, מהיום (אם עוד אפשר) והלאה
+  function pickupDays(todayKey, minutes, special) {
+    var days = [];
+    for (var i = 0; i <= 30 && days.length < PICKUP_DAYS; i++) {
+      var k = addDays(todayKey, i);
+      var slots = pickupSlots(k, todayKey, minutes, special);
+      if (slots.length) days.push({ key: k, slots: slots });
+    }
+    return days;
+  }
+
+  // "היום, חמישי 19/11" / "מחר, שישי 20/11" / "יום שני 23/11"
+  function dayLabel(key, todayKey) {
+    var name = DAY_NAMES[weekday(key)];
+    if (key === todayKey) return 'היום, ' + name + ' ' + shortDate(key);
+    if (key === addDays(todayKey, 1)) return 'מחר, ' + name + ' ' + shortDate(key);
+    return 'יום ' + name + ' ' + shortDate(key);
+  }
+
+  return {
+    dayInfo: dayInfo, handlingDay: handlingDay, nextOpenDay: nextOpenDay, isOpenForOrders: isOpenForOrders,
+    pickupSlots: pickupSlots, pickupDays: pickupDays, dayLabel: dayLabel, addDays: addDays, weekday: weekday,
+    hhmm: hhmm, shortDate: shortDate, DAY_NAMES: DAY_NAMES, PREP_MINUTES: PREP_MINUTES
+  };
+})();
+
+    let specialDays = {};   // מהלשונית "ימים מיוחדים" בגיליון (מגיע עם הקטלוג)
+    let clockOffsetMs = 0;  // הפרש בין השעון במכשיר לשעון השרת, אם השעון במכשיר לא מכוון
+
+    // עכשיו לפי שעון ישראל: { key: "20261119", minutes: 1005 }
     function israelNow() {
+        const now = new Date(Date.now() + clockOffsetMs);
         try {
             const parts = new Intl.DateTimeFormat('en-US', {
-                timeZone: 'Asia/Jerusalem', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-            }).formatToParts(new Date());
+                timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+            }).formatToParts(now);
             const get = (t) => (parts.find(p => p.type === t) || {}).value;
-            const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(get('weekday'));
+            const key = get('year') + get('month') + get('day');
             const minutes = Number(get('hour')) * 60 + Number(get('minute'));
-            if (day >= 0 && isFinite(minutes)) return { day, minutes };
+            if (/^\d{8}$/.test(key) && isFinite(minutes)) return { key, minutes };
         } catch (e) { /* נופלים לשעון המכשיר */ }
-        const d = new Date();
-        return { day: d.getDay(), minutes: d.getHours() * 60 + d.getMinutes() };
+        const d = now;
+        const key = d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2);
+        return { key, minutes: d.getHours() * 60 + d.getMinutes() };
     }
 
-    // מחזיר טקסט הודעה, או null כשההזמנה תטופל היום
+    // הנתונים שהשרת מוסיף בסוף הקטלוג (ימים מיוחדים ושעת השרת)
+    function applyScheduleMeta(meta, fromCache) {
+        if (!meta || typeof meta !== 'object') return;
+        if (meta.special && typeof meta.special === 'object') {
+            const clean = {};
+            Object.keys(meta.special).forEach(k => {
+                const v = meta.special[k];
+                if (/^\d{8}$/.test(k) && v && (v.m === 'closed' || v.m === 'short')) {
+                    clean[k] = { m: v.m, r: typeof v.r === 'string' ? v.r.slice(0, 60) : '' };
+                }
+            });
+            specialDays = clean;
+        }
+        // רק שעה מקטלוג עדכני. הפרש קטן מ-2 דקות לא משנה כלום
+        if (!fromCache && typeof meta.now === 'number') {
+            const diff = meta.now - Date.now();
+            // הפרש של יותר מיממה וחצי הוא כנראה תקלה, ולא שעון לא מכוון: מתעלמים
+            clockOffsetMs = (Math.abs(diff) > 2 * 60000 && Math.abs(diff) < 36 * 3600000) ? diff : 0;
+        }
+        updateOrderHoursNotice();
+    }
+
+    // "מחר, שישי 20/11" / "ביום שני 23/11"
+    function whenPhrase(key, todayKey) {
+        if (key === Sched.addDays(todayKey, 1)) return 'מחר (יום ' + Sched.DAY_NAMES[Sched.weekday(key)] + ' ' + Sched.shortDate(key) + ')';
+        return 'ביום ' + Sched.DAY_NAMES[Sched.weekday(key)] + ' ' + Sched.shortDate(key);
+    }
+
+    // ההודעה הצהובה: חנות סגורה / הזמנות נסגרו / שעות מקוצרות. null = יום רגיל
     function getOrderHoursMessage() {
-        const { day, minutes } = israelNow();
-        if (ORDER_CUTOFF[day] !== undefined && minutes < ORDER_CUTOFF[day]) return null;
-
-        let next = day;
-        let daysAhead = 0;
-        do { next = (next + 1) % 7; daysAhead++; } while (ORDER_CUTOFF[next] === undefined && daysAhead < 7);
-
-        const when = next === 5 ? 'ביום שישי בבוקר' : 'ביום ' + DAY_NAMES[next] + ' מ־08:30';
-        let opening;
-        if (day === 6) opening = 'שבת שלום! ';
-        else if (ORDER_CUTOFF[day] === undefined) opening = 'החנות סגורה היום. ';
-        else opening = 'ההזמנות להיום נסגרו. ';
-        return opening + 'הזמנה שתישלח עכשיו תטופל ' + when + '.';
+        const { key, minutes } = israelNow();
+        const info = Sched.dayInfo(key, specialDays);
+        const reason = info.reason && info.reason !== 'חג' ? ' (' + info.reason + ')' : '';
+        if (info.closed) {
+            const next = Sched.nextOpenDay(key, specialDays);
+            let opening;
+            if (Sched.weekday(key) === 6) opening = 'שבת שלום! ';
+            else if (info.reason === 'חג') opening = 'חג שמח! החנות סגורה היום. ';
+            else opening = 'החנות סגורה היום' + reason + '. ';
+            return opening + 'הזמנה שתישלח עכשיו תטופל ' + whenPhrase(next, key) + ' מ־' + Sched.hhmm(Sched.dayInfo(next, specialDays).open) + '.';
+        }
+        // לילה, לפני הפתיחה: אפשר כבר להזמין, וההזמנה תטופל היום
+        if (minutes < info.open) {
+            return 'החנות תיפתח היום ב-' + Sched.hhmm(info.open) + '. אפשר כבר להזמין, וההזמנה תטופל היום.';
+        }
+        if (minutes >= info.cutoff) {
+            const next = Sched.nextOpenDay(key, specialDays);
+            return 'ההזמנות להיום נסגרו. הזמנה שתישלח עכשיו תטופל ' + whenPhrase(next, key) + '.';
+        }
+        if (info.short && Sched.weekday(key) !== 5) {
+            return 'היום שעות מקוצרות' + reason + ': הזמנות עד ' + Sched.hhmm(info.cutoff) + ', משלוחים ' + info.delivery + ', החנות פתוחה עד ' + Sched.hhmm(info.close) + '.';
+        }
+        return null;
     }
 
-    // הפס הירוק העליון: ביום שישי מציג את שעת הסיום של שישי (11:00) במקום 17:00
+    // הפס הירוק העליון: שעת סיום ההזמנות של היום (בשישי ובערב חג 11:00)
     function updateAnnouncementOrders() {
         const el = $('ann-orders');
         if (!el) return;
-        const isFriday = israelNow().day === 5;
-        const html = isFriday
-            ? '📋 הזמנות <span class="ann-long">מתקבלות </span>היום עד <span class="ann-long">השעה </span>11:00'
-            : '📋 הזמנות <span class="ann-long">מתקבלות </span>עד <span class="ann-long">השעה </span>17:00';
+        const { key } = israelNow();
+        const info = Sched.dayInfo(key, specialDays);
+        const html = (!info.closed && info.short)
+            ? '<span aria-hidden="true">📋</span> הזמנות <span class="ann-long">מתקבלות </span>היום עד <span class="ann-long">השעה </span>' + Sched.hhmm(info.cutoff)
+            : '<span aria-hidden="true">📋</span> הזמנות <span class="ann-long">מתקבלות </span>עד <span class="ann-long">השעה </span>17:00';
         if (el.innerHTML !== html) el.innerHTML = html;
+    }
+
+    // השורה "המשלוח יגיע..." בטופס
+    function updateDeliveryWhen() {
+        const el = $('delivery-when');
+        if (!el) return;
+        if (deliveryMethod !== 'delivery') { el.textContent = ''; el.classList.add('hidden'); return; }
+        const { key, minutes } = israelNow();
+        const day = Sched.handlingDay(key, minutes, specialDays);
+        const info = Sched.dayInfo(day, specialDays);
+        const when = day === key ? 'היום' : whenPhrase(day, key);
+        setIconText(el, '🚚 המשלוח יגיע ' + when + ' ' + info.delivery + '.');
+        el.classList.remove('hidden');
+    }
+
+    // רשימות היום והשעה לאיסוף. שומר על הבחירה הקיימת אם היא עדיין אפשרית
+    function renderPickupOptions() {
+        const daySel = $('pickup-day');
+        const timeSel = $('pickup-time');
+        if (!daySel || !timeSel) return;
+        const { key, minutes } = israelNow();
+        const days = Sched.pickupDays(key, minutes, specialDays);
+        const prevDay = daySel.value;
+        daySel.innerHTML = days.map(d => `<option value="${d.key}">${escapeHTML(Sched.dayLabel(d.key, key))}</option>`).join('');
+        if (days.some(d => d.key === prevDay)) daySel.value = prevDay;
+        renderPickupTimes();
+    }
+
+    function renderPickupTimes() {
+        const daySel = $('pickup-day');
+        const timeSel = $('pickup-time');
+        if (!daySel || !timeSel) return;
+        const { key, minutes } = israelNow();
+        const slots = daySel.value ? Sched.pickupSlots(daySel.value, key, minutes, specialDays) : [];
+        const prev = timeSel.value;
+        timeSel.innerHTML = '<option value="">בחר שעה</option>' + slots.map(t => `<option value="${Sched.hhmm(t)}">${Sched.hhmm(t)}</option>`).join('');
+        if (slots.some(t => Sched.hhmm(t) === prev)) timeSel.value = prev;
+    }
+
+    function onPickupDayChange() {
+        renderPickupTimes();
+        clearFieldError('pickup-time');
+    }
+
+    // הבחירה הנוכחית, אם היא עדיין אפשרית: { date, time } או null
+    function getPickupSelection() {
+        const daySel = $('pickup-day');
+        const timeSel = $('pickup-time');
+        if (!daySel || !timeSel || !daySel.value || !timeSel.value) return null;
+        const { key, minutes } = israelNow();
+        const slots = Sched.pickupSlots(daySel.value, key, minutes, specialDays).map(Sched.hhmm);
+        if (!slots.includes(timeSel.value)) return null;
+        return { date: daySel.value, time: timeSel.value, label: Sched.dayLabel(daySel.value, key) + ' בשעה ' + timeSel.value };
     }
 
     function updateOrderHoursNotice() {
@@ -1771,9 +2305,11 @@
         ['order-hours-notice', 'checkout-hours-notice'].forEach(id => {
             const el = $(id);
             if (!el) return;
-            el.textContent = message ? '🕒 ' + message : '';
+            setIconText(el, message ? '🕒 ' + message : '');
             el.classList.toggle('hidden', !message);
         });
+        updateDeliveryWhen();
+        renderPickupOptions();
     }
 
     window.filterCategory = filterCategory;
@@ -1803,25 +2339,17 @@
     window.handleStickyBarClick = handleStickyBarClick;
     window.saveLastOrderAsList = saveLastOrderAsList;
     window.changeCartQty = changeCartQty;
+    window.editItemNote = editItemNote;
+    window.onPickupDayChange = onPickupDayChange;
 
     function init() {
         // שגיאה בשדה נעלמת ברגע שהלקוח מתחיל לתקן
-        ['cust-name', 'cust-phone', 'cust-email', 'cust-address', 'cust-notes'].forEach(id => {
+        ['cust-name', 'cust-phone', 'cust-email', 'cust-address', 'cust-notes', 'cust-store-notes', 'pickup-time'].forEach(id => {
             const el = $(id);
-            if (el) el.addEventListener('input', () => clearFieldError(id));
+            if (el) el.addEventListener(id === 'pickup-time' ? 'change' : 'input', () => clearFieldError(id));
         });
 
-        // קישור הכשרות והפס התחתון נגישים גם במקלדת
-        document.querySelectorAll('.kashrut-link').forEach(el => {
-            el.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openKashrutModal(); }
-            });
-        });
-        document.querySelectorAll('.header-hours-link').forEach(el => {
-            el.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHoursModal(); }
-            });
-        });
+        // "בכשרות מהודרת" ו"שעות פעילות" בכותרת הם כפתורים רגילים, ולכן עובדים במקלדת בלי טיפול נוסף
         const sticky = $('sticky-cart-bar');
         if (sticky) {
             sticky.addEventListener('keydown', (e) => {
