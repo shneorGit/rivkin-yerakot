@@ -2222,7 +2222,8 @@
         }
         // לילה, לפני הפתיחה: אפשר כבר להזמין, וההזמנה תטופל היום
         if (minutes < info.open) {
-            return 'החנות תיפתח היום ב-' + Sched.hhmm(info.open) + '. אפשר כבר להזמין, וההזמנה תטופל היום.';
+            // רווח שלא נשבר בין "היום" לשעה, כדי שהשעה לא תתחיל שורה לבד
+            return 'החנות נפתחת היום\u00A0ב-' + Sched.hhmm(info.open) + '. אפשר כבר להזמין!';
         }
         if (minutes >= info.cutoff) {
             const next = Sched.nextOpenDay(key, specialDays);

@@ -984,6 +984,18 @@ footer { background: white; border-top: 1px solid #f1f5f9; margin-top: 3rem; pad
 .success-when { margin: 0.4rem auto 0; font-size: 1rem; font-weight: 700; color: #14532d; }
 
 /* ===== נגישות: "בכשרות מהודרת" ו"שעות פעילות" בכותרת הם כפתורים, בגובה מינימלי של 24px ===== */
-button.kashrut-link, button.header-hours-link { font: inherit; font-weight: 700; background: none; border: none; padding: 0.15rem 0; margin: 0; min-height: 24px; line-height: 1.4; text-align: inherit; }
+/* שטח הלחיצה מוגדל עם ריפוד, ומרווח שלילי שומר על המראה והמיקום כמו קודם */
+button.kashrut-link, button.header-hours-link { font: inherit; font-weight: 700; line-height: inherit; background: none; border: none; padding: 5px 0; margin: -5px 0; text-align: inherit; vertical-align: baseline; }
 button.header-hours-link { display: none; }
 @media (max-width: 1023px) { button.header-hours-link { display: block; } }
+
+/* שבירת שורות מאוזנת בהודעות קצרות: בטלפון צר הטקסט מתחלק לשורות באורך דומה,
+   במקום שורה מלאה ושארית של מילה אחת. דפדפן שלא מכיר את זה פשוט מתעלם */
+.order-hours-notice, .images-note, .when-note, .field-hint, .limit-note, .checkout-price-note, .success-when { text-wrap: balance; }
+
+/* שבירת שורות יפה בכל האתר: הדפדפן נמנע משורה אחרונה של מילה אחת.
+   בכותרות, בכפתורים ובתוויות: שורות באורך דומה. משפיע רק על המקום שבו השורה נשברת,
+   לא על גדלים או מיקומים. דפדפן שלא מכיר את זה פשוט מתעלם */
+/* הכותרת העליונה לא בכלל (שם השורות מתוכננות בנפרד) */
+main, footer, .dialog-box { text-wrap: pretty; }
+main h2, main h3, main button, main label, .dialog-box button, .product-name, .cart-item-title, .item-note-btn, .limit-note { text-wrap: balance; }
